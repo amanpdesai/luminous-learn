@@ -67,7 +67,7 @@ export function AppSidebar() {
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
-          <SidebarMenuItem>
+          <SidebarMenuItem className="hidden">
             <SidebarMenuButton size={"lg"} asChild isActive={isActive("/quizzes")}>
               <Link href="/quizzes" className="flex items-center gap-4 text-base">
                 <ListTodo className="!h-5 !w-5 md:h-5 md:w-5" />

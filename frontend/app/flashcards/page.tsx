@@ -1,4 +1,4 @@
-"use client";
+"use client"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -7,23 +7,11 @@ import { BookOpen, Calendar, Clock, ExternalLink, Layers, Plus, Search, Zap } fr
 import Link from "next/link"
 import { AppShell } from "@/components/layout/app-shell"
 import { useRouter } from "next/navigation"
-import { useEffect } from "react"
-import { supabase } from "@/lib/supabaseClient"
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/input"
+import { useMemo, useState } from "react"
 
 export default function FlashcardsPage() {
-  const router = useRouter();
-      
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        router.push("/auth")
-      }
-    }
-
-    checkAuth()
-  }, [router])
+  const router = useRouter()
 
   // Mock flashcard sets data
   const courseSets = [
@@ -33,6 +21,11 @@ export default function FlashcardsPage() {
       cardCount: 42,
       lastReviewed: "2 days ago",
       courseType: "Full Course",
+      progress: {
+        stillLearning: 10,
+        stillStudying: 12,
+        mastered: 20,
+      },
     },
     {
       id: 2,
@@ -40,6 +33,11 @@ export default function FlashcardsPage() {
       cardCount: 36,
       lastReviewed: "Yesterday",
       courseType: "Full Course",
+      progress: {
+        stillLearning: 5,
+        stillStudying: 15,
+        mastered: 16,
+      },
     },
     {
       id: 3,
@@ -47,6 +45,11 @@ export default function FlashcardsPage() {
       cardCount: 28,
       lastReviewed: "1 week ago",
       courseType: "Full Course",
+      progress: {
+        stillLearning: 8,
+        stillStudying: 10,
+        mastered: 10,
+      },
     },
   ]
 
@@ -57,6 +60,11 @@ export default function FlashcardsPage() {
       cardCount: 12,
       lastReviewed: "3 days ago",
       duration: "15 min",
+      progress: {
+        stillLearning: 3,
+        stillStudying: 4,
+        mastered: 5,
+      },
     },
     {
       id: 2,
@@ -64,6 +72,11 @@ export default function FlashcardsPage() {
       cardCount: 8,
       lastReviewed: "5 days ago",
       duration: "10 min",
+      progress: {
+        stillLearning: 2,
+        stillStudying: 3,
+        mastered: 3,
+      },
     },
     {
       id: 3,
@@ -71,6 +84,11 @@ export default function FlashcardsPage() {
       cardCount: 15,
       lastReviewed: "Yesterday",
       duration: "20 min",
+      progress: {
+        stillLearning: 4,
+        stillStudying: 6,
+        mastered: 5,
+      },
     },
     {
       id: 4,
@@ -78,8 +96,40 @@ export default function FlashcardsPage() {
       cardCount: 6,
       lastReviewed: "4 days ago",
       duration: "8 min",
+      progress: {
+        stillLearning: 1,
+        stillStudying: 2,
+        mastered: 3,
+      },
     },
   ]
+
+  const [searchTerm, setSearchTerm] = useState("")
+  const [sortOption, setSortOption] = useState<"title_asc" | "title_desc" | "cards_asc" | "cards_desc">("title_asc")
+
+  const filteredAndSortedCourseSets = useMemo(() => {
+    return [...courseSets]
+      .filter((set) => set.title.toLowerCase().includes(searchTerm.toLowerCase()))
+      .sort((a, b) => {
+        const [key, dir] = sortOption.split("_")
+        if (key === "cards") {
+          return dir === "asc" ? a.cardCount - b.cardCount : b.cardCount - a.cardCount
+        }
+        return dir === "asc" ? a.title.localeCompare(b.title) : b.title.localeCompare(a.title)
+      })
+  }, [searchTerm, sortOption, courseSets])
+
+  const filteredAndSortedQuickLearnSets = useMemo(() => {
+    return [...quickLearnSets]
+      .filter((set) => set.title.toLowerCase().includes(searchTerm.toLowerCase()))
+      .sort((a, b) => {
+        const [key, dir] = sortOption.split("_")
+        if (key === "cards") {
+          return dir === "asc" ? a.cardCount - b.cardCount : b.cardCount - a.cardCount
+        }
+        return dir === "asc" ? a.title.localeCompare(b.title) : b.title.localeCompare(a.title)
+      })
+  }, [searchTerm, sortOption, quickLearnSets])
 
   return (
     <div className="flex-1 w-full mx-auto">
@@ -99,7 +149,7 @@ export default function FlashcardsPage() {
                   className="w-[250px] pl-8 rounded-lg border-border/40 bg-muted/40"
                 />
               </div>
-              <Button className="glow-button w-full sm:w-auto">
+              <Button className="glow-button w-full sm:w-auto" onClick={() => router.push("/flashcards/create")}>
                 <Plus className="mr-2 h-4 w-4" />
                 Create Flashcard Set
               </Button>
@@ -107,30 +157,30 @@ export default function FlashcardsPage() {
           </div>
 
           <Tabs defaultValue="courses" className="space-y-6">
-          <TabsList className="inline-flex justify-start items-center px-1 py-6 bg-card border border-border rounded-full mb-6 z-10 relative shadow-sm">
-            <TabsTrigger
-              value="courses"
-              className="px-6 py-5 text-base font-medium rounded-full transition-all
+            <TabsList className="inline-flex justify-start items-center px-1 py-6 bg-card border border-border rounded-full mb-6 z-10 relative shadow-sm">
+              <TabsTrigger
+                value="courses"
+                className="px-6 py-5 text-base font-medium rounded-full transition-all
                 text-muted-foreground hover:text-foreground
                 data-[state=active]:text-white
                 data-[state=active]:bg-primary/60
                 data-[state=active]:shadow
                 data-[state=active]:glow-text"
-            >
-              Course Flashcards
-            </TabsTrigger>
-            <TabsTrigger
-              value="quick-learn"
-              className="px-6 py-5 text-base font-medium rounded-full transition-all
+              >
+                Course Flashcards
+              </TabsTrigger>
+              <TabsTrigger
+                value="quick-learn"
+                className="px-6 py-5 text-base font-medium rounded-full transition-all
                 text-muted-foreground hover:text-foreground
                 data-[state=active]:text-white
-                data-[state=active]:bg-primary/60
+                data-[state=active]:bg-secondary/60
                 data-[state=active]:shadow
                 data-[state=active]:glow-text"
-            >
-              Quick Learn Flashcards
-            </TabsTrigger>
-          </TabsList>
+              >
+                Quick Learn Flashcards
+              </TabsTrigger>
+            </TabsList>
             <TabsContent value="courses" className="space-y-6 animate-in fade-in-50 duration-300">
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {courseSets.map((set) => (
@@ -146,14 +196,37 @@ export default function FlashcardsPage() {
                       <CardDescription className="mt-1.5">Flashcard set for course material</CardDescription>
                     </CardHeader>
                     <CardContent className="pb-3">
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div className="flex items-center gap-1.5">
-                          <BookOpen className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">{set.cardCount} cards</span>
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div className="flex items-center gap-1.5">
+                            <BookOpen className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">{set.cardCount} cards</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 justify-end">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">{set.lastReviewed}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1.5 justify-end">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">{set.lastReviewed}</span>
+
+                        <div className="flex items-center gap-2 text-xs">
+                          <div className="h-1.5 bg-red-500/30 rounded-full flex-1">
+                            <div
+                              className="h-full bg-red-500 rounded-full"
+                              style={{ width: `${(set.progress.stillLearning / set.cardCount) * 100}%` }}
+                            />
+                          </div>
+                          <div className="h-1.5 bg-amber-500/30 rounded-full flex-1">
+                            <div
+                              className="h-full bg-amber-500 rounded-full"
+                              style={{ width: `${(set.progress.stillStudying / set.cardCount) * 100}%` }}
+                            />
+                          </div>
+                          <div className="h-1.5 bg-green-500/30 rounded-full flex-1">
+                            <div
+                              className="h-full bg-green-500 rounded-full"
+                              style={{ width: `${(set.progress.mastered / set.cardCount) * 100}%` }}
+                            />
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -177,7 +250,7 @@ export default function FlashcardsPage() {
                     <p className="text-sm text-muted-foreground text-center mb-5 max-w-xs">
                       Generate flashcards from your courses to help with memorization
                     </p>
-                    <Button className="glow-button">
+                    <Button className="glow-button" onClick={() => router.push("/flashcards/create")}>
                       <Plus className="mr-2 h-4 w-4" />
                       Create Set
                     </Button>
@@ -201,14 +274,37 @@ export default function FlashcardsPage() {
                       <CardDescription className="mt-1.5">Flashcard set for quick session</CardDescription>
                     </CardHeader>
                     <CardContent className="pb-3">
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div className="flex items-center gap-1.5">
-                          <BookOpen className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">{set.cardCount} cards</span>
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div className="flex items-center gap-1.5">
+                            <BookOpen className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">{set.cardCount} cards</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 justify-end">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">{set.duration}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1.5 justify-end">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">{set.duration}</span>
+
+                        <div className="flex items-center gap-2 text-xs">
+                          <div className="h-1.5 bg-red-500/30 rounded-full flex-1">
+                            <div
+                              className="h-full bg-red-500 rounded-full"
+                              style={{ width: `${(set.progress.stillLearning / set.cardCount) * 100}%` }}
+                            />
+                          </div>
+                          <div className="h-1.5 bg-amber-500/30 rounded-full flex-1">
+                            <div
+                              className="h-full bg-amber-500 rounded-full"
+                              style={{ width: `${(set.progress.stillStudying / set.cardCount) * 100}%` }}
+                            />
+                          </div>
+                          <div className="h-1.5 bg-green-500/30 rounded-full flex-1">
+                            <div
+                              className="h-full bg-green-500 rounded-full"
+                              style={{ width: `${(set.progress.mastered / set.cardCount) * 100}%` }}
+                            />
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -232,7 +328,10 @@ export default function FlashcardsPage() {
                     <p className="text-sm text-muted-foreground text-center mb-5 max-w-xs">
                       Generate flashcards from your quick learn sessions
                     </p>
-                    <Button className="glow-button-pink bg-secondary hover:bg-secondary/90">
+                    <Button
+                      className="glow-button-pink bg-secondary hover:bg-secondary/90"
+                      onClick={() => router.push("/flashcards/create")}
+                    >
                       <Plus className="mr-2 h-4 w-4" />
                       Create Set
                     </Button>
