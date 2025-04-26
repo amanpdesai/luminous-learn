@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ArrowLeft, Check, ChevronLeft, Clock, X } from "lucide-react"
+import { ArrowLeft, Check, Clock, X } from "lucide-react"
 import Link from "next/link"
 
 type QuestionType = "multiple-choice" | "written" | "true-false"
@@ -26,8 +26,7 @@ interface Question {
 }
 
 export default function TestViewPage() {
-  const params = useParams() as { type: string; id: string } ;
-  const { type, id } = params
+  const params = useParams() as { type: string; id: string }
   const router = useRouter()
   const [testStarted, setTestStarted] = useState(false)
   const [testCompleted, setTestCompleted] = useState(false)
