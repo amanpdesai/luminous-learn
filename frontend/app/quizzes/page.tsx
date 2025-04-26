@@ -7,23 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AppShell } from "@/components/layout/app-shell"
 import { FileText, Plus, Search } from "lucide-react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabaseClient"
-import { useEffect } from "react"
 
 export default function QuizzesPage() {
-  const router = useRouter();
-      
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        router.push("/auth")
-      }
-    }
-
-    checkAuth()
-  }, [router])
   // Mock quiz data
   const quizzes = [
     {
@@ -74,7 +59,7 @@ export default function QuizzesPage() {
                 <h1 className="text-3xl font-display">Quizzes</h1>
                 <p className="text-muted-foreground mt-1">Test your knowledge and track your progress</p>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
                 <div className="relative">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -93,38 +78,14 @@ export default function QuizzesPage() {
             </div>
 
             <Tabs defaultValue="all" className="space-y-6">
-              <TabsList className="inline-flex justify-center items-center px-1 py-5 bg-card border border-border rounded-full mb-6 z-10 relative shadow-sm">
-                <TabsTrigger
-                  value="all"
-                  className="px-6 py-4 text-sm font-medium rounded-full transition-all
-                    text-muted-foreground hover:text-foreground
-                    data-[state=active]:bg-primary/60
-                    data-[state=active]:text-white
-                    data-[state=active]:shadow
-                    data-[state=active]:glow-text"
-                >
+              <TabsList className="bg-muted/40 p-1">
+                <TabsTrigger value="all" className="rounded-md">
                   All Quizzes
                 </TabsTrigger>
-                <TabsTrigger
-                  value="recent"
-                  className="px-6 py-4 text-sm font-medium rounded-full transition-all
-                    text-muted-foreground hover:text-foreground
-                    data-[state=active]:bg-primary/60
-                    data-[state=active]:text-white
-                    data-[state=active]:shadow
-                    data-[state=active]:glow-text"
-                >
+                <TabsTrigger value="recent" className="rounded-md">
                   Recent
                 </TabsTrigger>
-                <TabsTrigger
-                  value="course"
-                  className="px-6 py-4 text-sm font-medium rounded-full transition-all
-                    text-muted-foreground hover:text-foreground
-                    data-[state=active]:bg-primary/60
-                    data-[state=active]:text-white
-                    data-[state=active]:shadow
-                    data-[state=active]:glow-text"
-                >
+                <TabsTrigger value="course" className="rounded-md">
                   By Course
                 </TabsTrigger>
               </TabsList>

@@ -1,5 +1,3 @@
-"use client";
-
 import type React from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,27 +10,8 @@ import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Bell, CreditCard, Globe, Lock, Mail, Moon, Sun } from "lucide-react"
 import { AppShell } from "@/components/layout/app-shell"
-import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabaseClient";
-import { useEffect } from "react";
-import { useSearchParams } from "next/navigation"
 
 export default function SettingsPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams()
-  const activeTab = searchParams.get("tab") ?? "profile"
-
-      
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        router.push("/auth")
-      }
-    }
-
-    checkAuth()
-  }, [router])
   return (
     <div className="flex-1 w-full mx-auto">
       <AppShell>
@@ -42,52 +21,12 @@ export default function SettingsPage() {
             <p className="text-muted-foreground">Manage your account settings and preferences</p>
           </div>
 
-          <Tabs defaultValue={activeTab} className="space-y-6">
-            <TabsList className="inline-flex justify-start items-center px-1 py-5 bg-card border border-border rounded-full shadow-sm w-full max-w-2xl mb-6">
-              <TabsTrigger
-                value="profile"
-                className="px-6 py-4 text-md font-medium rounded-full transition-all
-                  text-muted-foreground hover:text-foreground
-                  data-[state=active]:text-white
-                  data-[state=active]:bg-primary/60
-                  data-[state=active]:shadow
-                  data-[state=active]:glow-text"
-              >
-                Profile
-              </TabsTrigger>
-              <TabsTrigger
-                value="appearance"
-                className="px-6 py-4 text-md font-medium rounded-full transition-all
-                  text-muted-foreground hover:text-foreground
-                  data-[state=active]:text-white
-                  data-[state=active]:bg-primary/60
-                  data-[state=active]:shadow
-                  data-[state=active]:glow-text"
-              >
-                Appearance
-              </TabsTrigger>
-              <TabsTrigger
-                value="notifications"
-                className="px-6 py-4 text-md font-medium rounded-full transition-all
-                  text-muted-foreground hover:text-foreground
-                  data-[state=active]:text-white
-                  data-[state=active]:bg-primary/60
-                  data-[state=active]:shadow
-                  data-[state=active]:glow-text"
-              >
-                Notifications
-              </TabsTrigger>
-              <TabsTrigger
-                value="billing"
-                className="px-6 py-4 text-md font-medium rounded-full transition-all
-                  text-muted-foreground hover:text-foreground
-                  data-[state=active]:text-white
-                  data-[state=active]:bg-primary/60
-                  data-[state=active]:shadow
-                  data-[state=active]:glow-text"
-              >
-                Billing
-              </TabsTrigger>
+          <Tabs defaultValue="profile" className="space-y-6">
+            <TabsList className="grid grid-cols-4 w-full max-w-2xl">
+              <TabsTrigger value="profile">Profile</TabsTrigger>
+              <TabsTrigger value="appearance">Appearance</TabsTrigger>
+              <TabsTrigger value="notifications">Notifications</TabsTrigger>
+              <TabsTrigger value="billing">Billing</TabsTrigger>
             </TabsList>
 
             <TabsContent value="profile" className="space-y-6 animate-in fade-in-50 duration-300">

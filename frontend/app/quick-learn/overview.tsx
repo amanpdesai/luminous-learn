@@ -3,23 +3,8 @@ import { Clock, ExternalLink, FileText, Plus, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { AppShell } from "@/components/layout/app-shell"
-import { useRouter } from "next/navigation"
-import { useEffect } from "react"
-import { supabase } from "@/lib/supabaseClient"
 
 export default function QuickLearnOverviewPage() {
-  const router = useRouter();
-      
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        router.push("/auth")
-      }
-    }
-
-    checkAuth()
-  }, [router])
   // Mock quick learn sessions data
   const quickLearnSessions = [
     {

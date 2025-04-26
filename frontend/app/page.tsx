@@ -1,24 +1,9 @@
-"use client"
-
-import { useEffect, useState } from "react"
-import { supabase } from "@/lib/supabaseClient"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
 import { BookOpen, Brain, CheckCircle, ChevronRight, FileText, Lightbulb, Sparkles, Zap } from "lucide-react"
 
 export default function Home() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-
-  useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setIsLoggedIn(!!session)
-    }
-
-    checkSession()
-  }, [])
-
   return (
     <div className="flex min-h-screen flex-col">
       {/* Header */}
@@ -41,26 +26,16 @@ export default function Home() {
           </nav>
           <div className="flex items-center gap-4">
             <ModeToggle />
-            {isLoggedIn ? (
-              <Link href="/dashboard">
-                <Button size="sm" className="glow-button">
-                  Dashboard
-                </Button>
-              </Link>
-            ) : (
-              <>
-                <Link href="/auth">
-                  <Button variant="outline" size="sm">
-                    Log In
-                  </Button>
-                </Link>
-                <Link href="/auth?tab=signup">
-                  <Button size="sm" className="glow-button">
-                    Sign Up
-                  </Button>
-                </Link>
-              </>
-            )}
+            <Link href="/auth">
+              <Button variant="outline" size="sm">
+                Log In
+              </Button>
+            </Link>
+            <Link href="/auth?tab=signup">
+              <Button size="sm" className="glow-button">
+                Sign Up
+              </Button>
+            </Link>
           </div>
         </div>
       </header>
