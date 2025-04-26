@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import React, { useState, useEffect, useMemo } from "react"
+import { useRouter, useParams } from "next/navigation"
 import { AppShell } from "@/components/layout/app-shell"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,9 +9,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { useSidebar } from "@/components/ui/sidebar"
 import { supabase } from "@/lib/supabaseClient"
 import { cn } from "@/lib/utils"
-import { PlusIcon, TrashIcon, Loader2Icon } from "lucide-react"
+import { PlusIcon, TrashIcon, Loader2Icon, AlertCircleIcon, CheckCircleIcon } from "lucide-react"
 import Link from "next/link"
-import { Label } from "@radix-ui/react-label"
+import { Label } from "@/components/ui/label"
 
 interface Lesson {
   title: string
@@ -23,79 +23,269 @@ interface UnitType {
   lessons: Lesson[]
 }
 
+interface CourseType {
+  id: string
+  title: string
+  description: string
+  units: UnitType[]
+  is_draft: boolean
+  estimated_duration_hours_per_week?: number
+  estimated_number_of_weeks?: number
+  prerequisites?: string[]
+  final_exam_description?: string
+  level?: string
+  depth?: string
+  unit_lessons?: any[]
+  user_id: string
+}
+
+// Simple notification component as we don't have a toast component
+const Notification = ({ message, type }: { message: string, type: 'success' | 'error' }) => {
+  const [show, setShow] = useState(true);
+  
+  useEffect(() => {
+    const timer = setTimeout(() => setShow(false), 3000);
+    return () => clearTimeout(timer);
+  }, []);
+  
+  if (!show) return null;
+  
+  return (
+    <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 rounded-md px-4 py-2 shadow-md transition-all ${
+      type === 'success' ? 'bg-green-500/90' : 'bg-red-500/90'
+    }`}>
+      {type === 'success' ? (
+        <CheckCircleIcon className="h-5 w-5 text-white" />
+      ) : (
+        <AlertCircleIcon className="h-5 w-5 text-white" />
+      )}
+      <span className="text-sm text-white">{message}</span>
+    </div>
+  );
+};
+
 export default function CourseOutlineEditor() {
   const [isSaving, setIsSaving] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [units, setUnits] = useState<UnitType[]>([])
-  const [courseTitle, setCourseTitle] = useState("Introduction to Python Programming")
-  const [courseDescription, setCourseDescription] = useState("A comprehensive introduction to Python programming language, covering basic syntax, data structures, control flow, and practical applications.")
+  const [courseTitle, setCourseTitle] = useState("")
+  const [courseDescription, setCourseDescription] = useState("")
+  const [courseData, setCourseData] = useState<CourseType | null>(null)
+  const [notification, setNotification] = useState<{message: string; type: 'success' | 'error'} | null>(null)
+  
   const router = useRouter()
+  const params = useParams()
+  const courseId = params.courseId as string
   const { open: isSidebarOpen } = useSidebar()
 
   useEffect(() => {
-    const checkAuthAndFetch = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return router.push("/auth")
-
-      // Simulated fetch
-      setUnits([
-        {
-          title: "Getting Started with Python",
-          lessons: [
-            { title: "Introduction to Programming Concepts", description: "Basic programming concepts and why Python is a great first language" },
-            { title: "Setting Up Your Python Environment", description: "Installing Python and setting up your development environment" },
-            { title: "Your First Python Program", description: "Writing and running a simple 'Hello World' program" },
-          ],
-        },
-        {
-          title: "Python Basics",
-          lessons: [
-            { title: "Variables and Data Types", description: "Understanding different data types and how to use variables" },
-            { title: "Operators and Expressions", description: "Working with arithmetic, comparison, and logical operators" },
-            { title: "Input and Output", description: "Getting user input and displaying output" },
-            { title: "Control Flow: Conditionals", description: "Using if, elif, and else statements for decision making" },
-          ],
-        },
-        {
-          title: "Data Structures",
-          lessons: [
-            { title: "Lists and Tuples", description: "Working with ordered collections of items" },
-            { title: "Dictionaries and Sets", description: "Using key-value pairs and unordered collections" },
-            { title: "String Manipulation", description: "Methods for working with text data" },
-          ],
-        },
-      ])
-      setIsLoading(false)
+    const fetchCourseDraft = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+        
+        // Check authentication
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          router.push("/auth")
+          return
+        }
+        
+        const token = session.access_token
+        
+        // Fetch the course draft from the database
+        const response = await fetch(`http://localhost:8080/api/get_user_course?course_id=${courseId}`, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+        })
+        
+        if (!response.ok) {
+          throw new Error("Failed to fetch course data")
+        }
+        
+        const data = await response.json()
+        
+        if (!data || !data.id) {
+          throw new Error("Course not found or invalid data")
+        }
+        
+        // Check if it's a draft
+        if (!data.is_draft) {
+          setError("This course is already published and cannot be edited as a draft.")
+          setIsLoading(false)
+          return
+        }
+        
+        // Set course data
+        setCourseData(data)
+        setCourseTitle(data.title || "")
+        setCourseDescription(data.description || "")
+        
+        // Parse units from data (if available)
+        if (data.units && Array.isArray(data.units)) {
+          setUnits(data.units)
+        } else {
+          // Default empty structure
+          setUnits([])
+        }
+        
+        setIsLoading(false)
+      } catch (error) {
+        console.error("Error fetching course:", error)
+        setError("Failed to load course data. Please try again.")
+        setIsLoading(false)
+      }
     }
+    
+    if (courseId) {
+      fetchCourseDraft()
+    }
+  }, [courseId, router])
 
-    checkAuthAndFetch()
-  }, [router])
+  const isValidCourse = useMemo(() => {
+    return courseTitle.trim() !== "" &&
+      courseDescription.trim() !== "" &&
+      units.length > 0 &&
+      units.every(unit =>
+        unit.title.trim() !== "" &&
+        unit.lessons.length > 0 &&
+        unit.lessons.every(lesson => lesson.title.trim() !== "" && lesson.description.trim() !== "")
+      )
+  }, [courseTitle, courseDescription, units])
 
-  const isValidCourse =
-    courseTitle.trim() !== "" &&
-    courseDescription.trim() !== "" &&
-    units.length > 0 &&
-    units.every(unit =>
-      unit.title.trim() !== "" &&
-      unit.lessons.length > 0 &&
-      unit.lessons.every(lesson => lesson.title.trim() !== "" && lesson.description.trim() !== "")
-    )
-
-  const handleSaveDraft = () => {
-    setIsSaving(true)
-    setTimeout(() => {
-        setIsSaving(false)
+  const handleSaveDraft = async () => {
+    try {
+      setIsSaving(true)
+      
+      // Get the session token
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push("/auth")
+        return
+      }
+      
+      const token = session.access_token
+      
+      // Prepare data to save
+      const draftData = {
+        title: courseTitle,
+        description: courseDescription,
+        units: units,
+        is_draft: true,
+      }
+      
+      // Make API request to update the draft
+      const response = await fetch(`http://localhost:8080/api/update_draft/${courseId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify(draftData),
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to save draft")
+      }
+      
+      // Show success notification
+      setNotification({
+        message: "Draft saved successfully",
+        type: "success"
+      })
+      
+      // Show notification before navigating
+      setTimeout(() => {
         router.push("/courses")
-    }, 1500)
+      }, 1500)
+    } catch (error) {
+      console.error("Error saving draft:", error)
+      // Show error notification
+      setNotification({
+        message: error instanceof Error ? error.message : "Failed to save draft",
+        type: "error"
+      })
+    } finally {
+      setIsSaving(false)
+    }
   }
 
-  const handlePublish = () => {
-    setIsPublishing(true)
-    setTimeout(() => {
+  const handlePublish = async () => {
+    try {
+      setIsPublishing(true)
+      
+      // Get the session token
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push("/auth")
+        return
+      }
+      
+      const token = session.access_token
+      
+      // Prepare data for publishing (mark as not a draft)
+      const publishData = {
+        title: courseTitle,
+        description: courseDescription,
+        units: units,
+        is_draft: false,
+      }
+      
+      // Make API request to update and publish the course
+      const response = await fetch(`http://localhost:8080/api/update_draft/${courseId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify(publishData),
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to publish course")
+      }
+      
+      // After publishing, generate the course content
+      const generateResponse = await fetch(`http://localhost:8080/api/generate_course`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ course_id: courseId }),
+      })
+      
+      if (!generateResponse.ok) {
+        const errorData = await generateResponse.json()
+        throw new Error(errorData.error || "Failed to generate course content")
+      }
+      
+      // Show success notification
+      setNotification({
+        message: "Course published successfully",
+        type: "success"
+      })
+      
+      // Show notification before navigating
+      setTimeout(() => {
+        router.push("/courses")
+      }, 1500)
+    } catch (error) {
+      console.error("Error publishing course:", error)
+      // Show error notification
+      setNotification({
+        message: error instanceof Error ? error.message : "Failed to publish course",
+        type: "error"
+      })
+    } finally {
       setIsPublishing(false)
-      router.push("/courses")
-    }, 2000)
+    }
   }
 
   const updateUnitTitle = (i: number, title: string) => {
@@ -117,7 +307,11 @@ export default function CourseOutlineEditor() {
   }
 
   const handleAddUnit = () => setUnits([...units, { title: "", lessons: [] }])
-  const handleDeleteUnit = (i: number) => setUnits(units.filter((_, idx) => idx !== i))
+  const handleDeleteUnit = (i: number) => {
+    if (units.length > 1 || window.confirm("Are you sure you want to delete the only unit?")) {
+      setUnits(units.filter((_, idx) => idx !== i))
+    }
+  }
   const handleAddLesson = (i: number) => {
     const updated = [...units]
     updated[i].lessons.push({ title: "", description: "" })
@@ -129,10 +323,52 @@ export default function CourseOutlineEditor() {
     setUnits(updated)
   }
 
-  if (isLoading) return <div className="text-center text-muted-foreground py-12">Loading course data...</div>
+  // Make sure we clear loading state if there's an issue with courseId
+  useEffect(() => {
+    if (!courseId) {
+      setIsLoading(false)
+      setError("Invalid course ID. Please select a valid course.")
+    }
+  }, [courseId])
+
+  if (isLoading) {
+    return (
+      <AppShell>
+        <div className="flex justify-center items-center min-h-[50vh]">
+          <div className="text-center space-y-4">
+            <Loader2Icon className="h-8 w-8 animate-spin mx-auto text-primary" />
+            <p className="text-muted-foreground">Loading course data...</p>
+          </div>
+        </div>
+      </AppShell>
+    )
+  }
+  
+  if (error) {
+    return (
+      <AppShell>
+        <div className="flex justify-center items-center min-h-[50vh]">
+          <div className="text-center space-y-4 max-w-md p-6 bg-card rounded-lg border border-border/50">
+            <AlertCircleIcon className="h-8 w-8 mx-auto text-destructive" />
+            <h2 className="text-xl font-semibold">Error</h2>
+            <p className="text-muted-foreground">{error}</p>
+            <Button asChild className="mt-4">
+              <Link href="/courses">Go Back to Courses</Link>
+            </Button>
+          </div>
+        </div>
+      </AppShell>
+    )
+  }
 
   return (
     <AppShell>
+      {notification && (
+        <Notification 
+          message={notification.message} 
+          type={notification.type} 
+        />
+      )}
       <div className="w-full px-6 md:px-12 xl:px-24 mx-auto my-4 space-y-6">
         <div className="md:hidden">
           <h1 className="text-3xl font-display glow-text">Course Outline Customizer</h1>
@@ -201,7 +437,18 @@ export default function CourseOutlineEditor() {
             <Button variant="outline" asChild className={cn("transition-all", isSidebarOpen ? "ml-44" : "ml-0")}><Link href="/courses">Cancel</Link></Button>
             <div className="flex items-center gap-3">
               <Button variant="outline" onClick={handleSaveDraft} disabled={isSaving}>{isSaving ? (<><Loader2Icon className="mr-2 h-4 w-4 animate-spin" />Saving...</>) : "Save Draft"}</Button>
-              <Button className="glow-button" onClick={handlePublish} disabled={isPublishing || !isValidCourse}>{isPublishing ? (<><Loader2Icon className="mr-2 h-4 w-4 animate-spin" />Creating...</>) : "Create Course"}</Button>
+              <Button 
+                className="glow-button" 
+                onClick={handlePublish} 
+                disabled={isPublishing || !isValidCourse}
+                title={!isValidCourse ? "Complete all course sections before publishing" : "Publish this course"}
+              >
+                {isPublishing ? (
+                  <><Loader2Icon className="mr-2 h-4 w-4 animate-spin" />Creating...</>
+                ) : (
+                  "Create Course"
+                )}
+              </Button>
             </div>
           </div>
         </div>

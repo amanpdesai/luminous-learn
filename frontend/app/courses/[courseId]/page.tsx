@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import {
   ArrowLeft,
@@ -20,7 +20,63 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { AppShell } from "@/components/layout/app-shell"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
+import { supabase } from "@/lib/supabaseClient"
+
+// Outline lesson (from units.lesson_outline)
+type LessonOutline = {
+  lesson: string
+  lesson_summary: string
+  learning_objectives: string[]
+}
+
+// Complete lesson (from unit_lessons)
+type LessonComplete = {
+  unit_number: number
+  lesson: string
+  lesson_summary: string
+  learning_objectives: string[]
+  readings: string
+  examples: string
+  exercises: string
+  assessments: string
+  additional_resources: Array<{unit_title: string, text: string, url: string}>
+  duration_in_min: string
+  status: string
+}
+
+type Unit = {
+  unit_number: number
+  title: string
+  unit_description: string
+  lesson_outline: LessonOutline[]
+  progress?: number
+  totalLessons?: number
+  completedModules?: number
+}
+
+type Course = {
+  id: string
+  title: string
+  description: string
+  estimated_duration_hours_per_week: number
+  estimated_number_of_weeks: number
+  prerequisites: string[]
+  final_exam_description?: string
+  level: string
+  depth: string
+  units: Unit[]
+  unit_lessons: LessonComplete[]
+  is_draft: boolean
+  last_accessed: string
+  completed: number
+  user_id: string
+  // Calculated fields for UI display
+  progress?: number
+  duration?: string
+  hoursPerWeek?: string
+}
+
 
 export default function CoursePage() {
   const params = useParams()
@@ -28,194 +84,113 @@ export default function CoursePage() {
   const [expandedUnits, setExpandedUnits] = useState<Record<number, boolean>>({
     0: true, // First unit expanded by default
   })
+  const router = useRouter()
+  const [course, setCourse] = useState<Course | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  // Mock course data based on the Python course example
-  const course = {
-    id: params.courseId,
-    title: "Introduction to Python Programming",
-    description:
-      "This course is designed for beginners who want to learn the basics of Python programming. Through a series of progressively challenging units, students will gain a foundational understanding of Python syntax, concepts, and the ability to write simple programs.",
-    duration: "3 weeks",
-    hoursPerWeek: "10 hours/week",
-    level: "Beginner",
-    prerequisites: "None",
-    progress: 0,
-    lastAccessed: "2025-03-26T06:22:33.676Z",
-    units: [
-      {
-        id: 1,
-        title: "Getting Started with Python",
-        progress: 0,
-        totalLessons: 5,
-        completedModules: 0,
-        lessons: [
-          {
-            id: 1,
-            title: "Installing Python and Setting Up the Development Environment",
-            type: "lesson",
-            duration: "15 min",
-            status: "in progress",
+  useEffect(() => {
+    const fetchCourse = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push("/auth")
+        return
+      }
+  
+      const token = session.access_token
+      if (!token) {
+        console.error("Not authenticated")
+        return
+      }
+  
+      if (!params.courseId) {
+        console.error("Missing course ID")
+        return
+      }
+  
+      try {
+        const response = await fetch(`http://localhost:8080/api/get_user_course?course_id=${params.courseId}`, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
           },
-          {
-            id: 2,
-            title: "Installing Python and Understanding the Interpreter",
-            type: "video",
-            duration: "20 min",
-            status: "not started",
-          },
-          {
-            id: 3,
-            title: "Python Installation and Environment Setup Quiz",
-            type: "quiz",
-            duration: "10 min",
-            status: "not started",
-          },
-          {
-            id: 4,
-            title: "Write Your First Python Script",
-            type: "lesson",
-            duration: "30 min",
-            status: "not started",
-          },
-          {
-            id: 5,
-            title: "Video Lecture: Learn Python - Full Course for Beginners",
-            type: "video",
-            duration: "45 min",
-            status: "not started",
-          },
-        ],
-      },
-      {
-        id: 2,
-        title: "Data Types and Variables",
-        progress: 0,
-        totalLessons: 5,
-        completedModules: 0,
-        lessons: [
-          {
-            id: 1,
-            title: "Understanding Basic Syntax and Expressions",
-            type: "lesson",
-            duration: "20 min",
-            status: "not started",
-          },
-          {
-            id: 2,
-            title: "Variables and Data Types in Python",
-            type: "video",
-            duration: "25 min",
-            status: "not started",
-          },
-          {
-            id: 3,
-            title: "Practice with Variables and Data Types",
-            type: "exercise",
-            duration: "30 min",
-            status: "not started",
-          },
-          {
-            id: 4,
-            title: "Data Types Quiz",
-            type: "quiz",
-            duration: "15 min",
-            status: "not started",
-          },
-          {
-            id: 5,
-            title: "Advanced Data Types",
-            type: "lesson",
-            duration: "35 min",
-            status: "not started",
-          },
-        ],
-      },
-      {
-        id: 3,
-        title: "Control Structures",
-        progress: 0,
-        totalLessons: 4,
-        completedModules: 0,
-        lessons: [
-          {
-            id: 1,
-            title: "Conditional Statements (if, elif, else)",
-            type: "lesson",
-            duration: "25 min",
-            status: "not started",
-          },
-          {
-            id: 2,
-            title: "Loops in Python (for and while)",
-            type: "video",
-            duration: "30 min",
-            status: "not started",
-          },
-          {
-            id: 3,
-            title: "Control Structures Practice",
-            type: "exercise",
-            duration: "40 min",
-            status: "not started",
-          },
-          {
-            id: 4,
-            title: "Control Structures Assessment",
-            type: "quiz",
-            duration: "20 min",
-            status: "not started",
-          },
-        ],
-      },
-      {
-        id: 4,
-        title: "Functions and Modules",
-        progress: 0,
-        totalLessons: 5,
-        completedModules: 0,
-        lessons: [
-          {
-            id: 1,
-            title: "Creating and Using Functions",
-            type: "lesson",
-            duration: "30 min",
-            status: "not started",
-          },
-          {
-            id: 2,
-            title: "Function Parameters and Return Values",
-            type: "video",
-            duration: "25 min",
-            status: "not started",
-          },
-          {
-            id: 3,
-            title: "Python Modules and Packages",
-            type: "lesson",
-            duration: "35 min",
-            status: "not started",
-          },
-          {
-            id: 4,
-            title: "Functions and Modules Practice",
-            type: "exercise",
-            duration: "45 min",
-            status: "not started",
-          },
-          {
-            id: 5,
-            title: "Functions and Modules Assessment",
-            type: "quiz",
-            duration: "25 min",
-            status: "not started",
-          },
-        ],
-      },
-    ],
-  }
+        })
+  
+        if (!response.ok) {
+          console.error("Failed to fetch course")
+          return
+        }
+  
+        const rawCourse = await response.json()
+  
+        if (!rawCourse || rawCourse.error) {
+          console.error("Course not found or unauthorized")
+          return
+        }
+        console.log("Fetched course:", rawCourse)
+        setCourse(rawCourse)
+      } catch (err) {
+        console.error("Error fetching course:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+  
+    fetchCourse()
+  }, [params.courseId])
+  
 
-  const totalLessons = course.units.reduce((total, unit) => total + unit.totalLessons, 0)
+  // Calculate total lessons from lesson_outline count
+  const totalLessons = course?.units?.reduce((total, unit) => {
+    return total + (unit.lesson_outline ? unit.lesson_outline.length : 0);
+  }, 0) || 0
+  
+  // Format duration and hours per week for display
+  const duration = course ? `${course.estimated_number_of_weeks} weeks` : ''
+  const hoursPerWeek = course ? `${course.estimated_duration_hours_per_week} hours/week` : ''
+  
+  // Calculate progress percentage
+  const progressPercentage = course ? (course.completed / totalLessons) * 100 : 0
 
+  // Find the current lesson based on progress
+  const getCurrentLessonLink = () => {
+    // Default to first unit, first lesson
+    let currentUnit = 1;
+    let currentLesson = 0;
+    
+    if (!course) return `${currentUnit}/${currentLesson}`;
+    
+    // If we have unit_lessons, find the first incomplete lesson
+    if (Array.isArray(course.unit_lessons) && course.unit_lessons.length > 0) {
+      const incompleteLesson = course.unit_lessons.find(
+        lesson => lesson.status !== "completed"
+      );
+      
+      if (incompleteLesson) {
+        // Use the first incomplete lesson
+        currentUnit = incompleteLesson.unit_number || 1;
+        
+        // Find the index of this lesson within its unit
+        if (Array.isArray(course.units)) {
+          const unitIndex = course.units.findIndex(
+            unit => unit.unit_number === currentUnit
+          );
+          
+          if (unitIndex >= 0 && Array.isArray(course.units[unitIndex]?.lesson_outline)) {
+            const lessonIndex = course.units[unitIndex].lesson_outline.findIndex(
+              outline => outline.lesson === incompleteLesson.lesson
+            );
+            
+            if (lessonIndex >= 0) {
+              currentLesson = lessonIndex;
+            }
+          }
+        }
+      }
+    }
+    
+    return `${currentUnit}/${currentLesson}`;
+  };
+  
   const toggleUnit = (unitIndex: number) => {
     setExpandedUnits((prev) => ({
       ...prev,
@@ -236,6 +211,10 @@ export default function CoursePage() {
       default:
         return <Book className="h-4 w-4 text-blue-400" />
     }
+  }
+
+  if (loading || !course){
+    return (<>Loading...</>)
   }
 
   return (
@@ -267,8 +246,10 @@ export default function CoursePage() {
                 </div>
 
                 <div className="flex flex-col gap-2 md:items-end">
-                  <Button variant="default" className="glow-button">
-                    Continue Learning
+                  <Button variant="default" className="glow-button" asChild>
+                    <Link href={`/courses/${course.id}/lesson/${getCurrentLessonLink()}`}>
+                      Continue Learning
+                    </Link>
                   </Button>
                 </div>
               </div>
@@ -284,11 +265,11 @@ export default function CoursePage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>{course.duration}</span>
+                  <span>{duration}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span>{course.hoursPerWeek}</span>
+                  <span>{hoursPerWeek}</span>
                 </div>
               </div>
             </div>
@@ -303,78 +284,107 @@ export default function CoursePage() {
               <h2 className="text-xl font-display mb-4">Course Content</h2>
               <div className="flex justify-between text-sm text-muted-foreground mb-2">
                 <span>
-                  {course.units.length} units • {course.units.reduce((acc, unit) => acc + unit.totalLessons, 0)} lessons
+                  {course.units.length} units • {course.units.reduce((acc, unit) => acc + (unit.lesson_outline?.length || 0), 0)} lessons
                 </span>
-                <span>{course.units.reduce((acc, unit) => acc + unit.completedModules, 0)} completed</span>
+                <span>{course.unit_lessons?.filter(lesson => lesson.status === "completed").length || 0} completed</span>
               </div>
               <Progress value={course.progress} className="h-2 mb-6" />
             </div>
 
             <div className="space-y-4">
-              {course.units.map((unit, unitIndex) => (
-                <div key={unitIndex} className="border border-border/50 rounded-lg overflow-hidden">
-                  {/* Unit Header */}
-                  <button
-                    onClick={() => toggleUnit(unitIndex)}
-                    className="w-full flex items-center justify-between p-4 bg-muted/30 hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
-                        {unitIndex + 1}
+              {course.units?.map((unit, unitIndex) => {
+                // Find lessons for this unit
+                const unitLessons = course.unit_lessons.filter(
+                  completeLesson => completeLesson.unit_number === unit.unit_number
+                );
+                
+                // Count completed lessons
+                const completedLessons = unitLessons.filter(
+                  lesson => lesson.status === "completed"
+                ).length;
+                
+                return (
+                  <div key={unitIndex} className="border border-border/50 rounded-lg overflow-hidden">
+                    {/* Unit Header */}
+                    <button
+                      onClick={() => toggleUnit(unitIndex)}
+                      className="w-full flex items-center justify-between p-4 bg-muted/30 hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
+                          {unit.unit_number}
+                        </div>
+                        <div className="text-left">
+                          <h3 className="font-medium">{unit.title}</h3>
+                          <p className="text-xs text-muted-foreground">
+                            {unit.lesson_outline?.length || 0} lessons • {completedLessons} completed
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-left">
-                        <h3 className="font-medium">{unit.title}</h3>
-                        <p className="text-xs text-muted-foreground">
-                          {unit.lessons.length} lessons • {unit.completedModules} completed
-                        </p>
-                      </div>
-                    </div>
-                    <ChevronDown
-                      className={`h-5 w-5 transition-transform ${expandedUnits[unitIndex] ? "rotate-180" : ""}`}
-                    />
-                  </button>
-
-                  {/* Unit Modules (conditionally rendered) */}
-                  {expandedUnits[unitIndex] && (
-                    <div className="border-t border-border/30">
-                      {unit.lessons.map((lesson, lessonIndex) => (
-                        <Link
-                          href={`/courses/${course.id}/lesson/${unit.id}/${lesson.id}`}
-                          key={lessonIndex}
-                          className="flex items-center justify-between p-4 hover:bg-muted/20 transition-colors border-b border-border/30 last:border-b-0"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 rounded-full bg-muted/50 flex items-center justify-center">
-                              {getModuleIcon(lesson.type)}
-                            </div>
-                            <div>
-                              <h4 className="text-sm font-medium">{lesson.title}</h4>
-                              <div className="flex items-center gap-3 mt-1">
-                                <span className="text-xs text-muted-foreground capitalize">{lesson.type}</span>
-                                <span className="text-xs text-muted-foreground">{lesson.duration}</span>
-                                <span
-                                  className={`text-xs ${
-                                    lesson.status === "completed"
-                                      ? "text-green-500"
-                                      : lesson.status === "in progress"
-                                        ? "text-amber-500"
-                                        : "text-muted-foreground"
-                                  } capitalize`}
-                                >
-                                  {lesson.status.replace("_", " ")}
-                                </span>
+                      <ChevronDown
+                        className={`h-5 w-5 transition-transform ${expandedUnits[unitIndex] ? "rotate-180" : ""}`}
+                      />
+                    </button>
+  
+                    {/* Unit Modules (conditionally rendered) */}
+                    {expandedUnits[unitIndex] && (
+                      <div className="border-t border-border/30">
+                        {unit.lesson_outline?.map((outlineLesson, lessonIndex) => {
+                          // Try to find the complete lesson data
+                          const completeLesson = unitLessons.find(complete => 
+                            complete.lesson === outlineLesson.lesson
+                          );
+                          
+                          // Default lesson type is "lesson"
+                          const lessonType = "lesson";
+                          
+                          // Calculate duration from minutes to a human-readable format
+                          const duration = completeLesson?.duration_in_min 
+                            ? `${completeLesson.duration_in_min} min` 
+                            : "30 min";
+                          
+                          return (
+                            <Link
+                              href={`/courses/${course.id}/lesson/${unit.unit_number}/${lessonIndex}`}
+                              key={lessonIndex}
+                              className="flex items-center justify-between p-4 hover:bg-muted/20 transition-colors border-b border-border/30 last:border-b-0"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="h-8 w-8 rounded-full bg-muted/50 flex items-center justify-center">
+                                  {getModuleIcon(lessonType)}
+                                </div>
+                                <div>
+                                  <h4 className="text-sm font-medium">{outlineLesson.lesson || 'Untitled Lesson'}</h4>
+                                  <div className="flex items-center gap-3 mt-1">
+                                    <span className="text-xs text-muted-foreground capitalize">{lessonType}</span>
+                                    <span className="text-xs text-muted-foreground">{duration}</span>
+                                    <span
+                                      className={`text-xs ${
+                                        completeLesson?.status === "completed"
+                                          ? "text-green-500"
+                                          : completeLesson?.status === "in progress"
+                                            ? "text-amber-500"
+                                            : "text-muted-foreground"
+                                      } capitalize`}
+                                    >
+                                      {completeLesson && typeof completeLesson.status === 'string' 
+                                        ? completeLesson.status.replace("_", " ") 
+                                        : completeLesson?.status || "not started"}
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          </div>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Play className="h-4 w-4" />
-                          </Button>
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <Play className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -384,10 +394,10 @@ export default function CoursePage() {
               <CardContent className="p-6 space-y-6">
                 <div>
                   <h3 className="text-lg font-medium mb-2">Your Progress</h3>
-                  <Progress value={course.progress} className="h-2 mb-2" />
+                  <Progress value={progressPercentage} className="h-2 mb-2" />
                   <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>{course.progress}% complete</span>
-                    <span>Last accessed {new Date(course.lastAccessed).toLocaleDateString()}</span>
+                    <span>{Math.round(progressPercentage)}% complete</span>
+                    <span>Last accessed {new Date(course.last_accessed).toLocaleDateString()}</span>
                   </div>
                 </div>
 
@@ -402,7 +412,7 @@ export default function CoursePage() {
                     </div>
                     <div className="flex justify-between">
                       <dt className="text-muted-foreground">Lessons</dt>
-                      <dd>{totalLessons}</dd>
+                      <dd>{totalLessons.toString()}</dd>
                     </div>
                     <div className="flex justify-between">
                       <dt className="text-muted-foreground">Level</dt>
@@ -410,15 +420,15 @@ export default function CoursePage() {
                     </div>
                     <div className="flex justify-between">
                       <dt className="text-muted-foreground">Duration</dt>
-                      <dd>{course.duration}</dd>
+                      <dd>{duration}</dd>
                     </div>
                     <div className="flex justify-between">
                       <dt className="text-muted-foreground">Time Commitment</dt>
-                      <dd>{course.hoursPerWeek}</dd>
+                      <dd>{hoursPerWeek}</dd>
                     </div>
                     <div className="flex justify-between">
                       <dt className="text-muted-foreground">Prerequisites</dt>
-                      <dd>{course.prerequisites}</dd>
+                      <dd>{course.prerequisites?.join(', ') || 'None'}</dd>
                     </div>
                   </dl>
                 </div>

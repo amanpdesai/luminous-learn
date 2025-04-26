@@ -1,23 +1,199 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { AppShell } from "@/components/layout/app-shell"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, FileText, Lightbulb, List, Video } from "lucide-react"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { MarkdownRenderer } from "@/components/ui/markdown-render"
 import TurndownService from "turndown"
+import { supabase } from "@/lib/supabaseClient"
+
+// Type definitions for the course data structure
+type Resource = {
+  unit_title: string
+  text: string
+  url: string
+}
+
+type LessonComplete = {
+  unit_number: number
+  lesson: string
+  lesson_summary: string
+  learning_objectives: string[]
+  readings: string
+  examples: string
+  exercises: string
+  assessments: string
+  additional_resources: Resource[]
+  duration_in_min: string
+  status: string
+}
+
+type LessonOutline = {
+  lesson: string
+  lesson_summary: string
+  learning_objectives: string[]
+}
+
+type Unit = {
+  unit_number: number
+  title: string
+  unit_description: string
+  lesson_outline: LessonOutline[]
+}
+
+type Course = {
+  id: string
+  title: string
+  description: string
+  estimated_duration_hours_per_week: number
+  estimated_number_of_weeks: number
+  prerequisites: string[]
+  final_exam_description?: string
+  level: string
+  depth: string
+  units: Unit[]
+  unit_lessons: LessonComplete[]
+  is_draft: boolean
+  last_accessed: string
+  completed: number
+  user_id: string
+}
+
+// Type for quiz questions
+type QuizQuestion = {
+  question: string
+  options: string[]
+  correctAnswer: number
+}
+
+// Type for fallback lesson data
+type FallbackLesson = {
+  id: number
+  title: string
+  type: string
+  duration: string
+  status: string
+}
+
+// Type for the lesson data structure used in the UI
+type LessonData = {
+  id: string | number
+  title: string
+  type: string
+  duration: string
+  course: {
+    id: string | string[]
+    title: string
+  }
+  unit: {
+    id: string | string[]
+    title: string
+    lessons: any[]
+  }
+  content: string
+  video: {
+    url: string
+    title: string
+  }
+  resources: {
+    title: string
+    url: string
+    type: string
+  }[]
+  quiz: QuizQuestion[]
+}
 
 export default function ModulePage() {
   const params = useParams()
-  const { courseId, unitId, lessonId } = params
+  const router = useRouter()
+  // Convert params to strings to prevent type errors
+  const courseId = Array.isArray(params.courseId) ? params.courseId[0] : params.courseId || ""
+  const unitId = Array.isArray(params.unitId) ? params.unitId[0] : params.unitId || ""
+  const lessonId = Array.isArray(params.lessonId) ? params.lessonId[0] : params.lessonId || ""
   const [isCompleted, setIsCompleted] = useState(false)
   const [activeTab, setActiveTab] = useState("content")
+  const [loading, setLoading] = useState(true)
+  const [course, setCourse] = useState<Course | null>(null)
+  const [unitLessons, setUnitLessons] = useState<LessonComplete[]>([])
+  const [currentLessonData, setCurrentLessonData] = useState<LessonComplete | null>(null)
 
-  const [lessons, setLessons] = useState([
+  // Fetch course and lesson data
+  useEffect(() => {
+    const fetchCourseAndLesson = async () => {
+      setLoading(true)
+      
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push("/auth")
+        return
+      }
+      
+      const token = session.access_token
+      if (!token) {
+        console.error("Not authenticated")
+        return
+      }
+      
+      try {
+        // Fetch the course data
+        const response = await fetch(`http://localhost:8080/api/get_user_course?course_id=${courseId}`, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+        })
+        
+        if (!response.ok) {
+          console.error("Failed to fetch course")
+          return
+        }
+        
+        const courseData = await response.json() as Course
+        setCourse(courseData)
+        
+        // Get current unit
+        const currentUnit = courseData.units.find(unit => unit.unit_number.toString() === unitId)
+        
+        if (!currentUnit) {
+          console.error("Unit not found")
+          return
+        }
+        
+        // Get lessons for this unit from unit_lessons
+        const lessonsForUnit = courseData.unit_lessons.filter(
+          lesson => lesson.unit_number.toString() === unitId
+        )
+        
+        setUnitLessons(lessonsForUnit)
+        
+        // Get the specific lesson data
+        const lessonIndex = parseInt(lessonId as string)
+        const lessonData = lessonsForUnit[lessonIndex] || null
+        
+        if (lessonData) {
+          setCurrentLessonData(lessonData)
+          // Check if lesson is already completed
+          setIsCompleted(lessonData.status === "completed")
+        }
+      } catch (error) {
+        console.error("Error fetching course or lesson:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    if (courseId && unitId && lessonId) {
+      fetchCourseAndLesson()
+    }
+  }, [courseId, unitId, lessonId, router])
+
+  // Mock lessons data for fallback
+  const [fallbackLessons, setFallbackLessons] = useState<FallbackLesson[]>([
     {
       id: 1,
       title: "Installing Python and Setting Up the Development Environment",
@@ -55,133 +231,109 @@ export default function ModulePage() {
     },
   ])
 
-  const currentLesson = lessons.find((l) => l.id === Number.parseInt(lessonId as string))
+  // Generate lesson object from fetched data or use fallback
+  const getLessonData = (): LessonData => {
+    if (loading || !currentLessonData || !course || !unitLessons.length) {
+      // Return fallback data if still loading or no data
+      const currentFallbackLesson = fallbackLessons.find(
+        (l) => l.id === Number.parseInt(lessonId as string)
+      );
+      
+      return {
+        id: lessonId || 0,
+        title: currentFallbackLesson?.title || "Lesson",
+        type: "lesson",
+        duration: "15 min",
+        course: {
+          id: courseId || "",
+          title: course?.title || "Course",
+        },
+        unit: {
+          id: unitId || "",
+          title: course?.units?.find(u => u.unit_number.toString() === unitId)?.title || "Unit",
+          lessons: fallbackLessons,
+        },
+        content: currentLessonData?.readings || `<h2>Loading lesson content...</h2>`, // Use readings as content
+        video: {
+          url: "https://www.youtube.com/embed/YYXdXT2l-Gg", // Default video
+          title: "Tutorial",
+        },
+        resources: currentLessonData?.additional_resources
+          ? currentLessonData.additional_resources.map((resource: Resource) => ({
+              title: resource.text.split(':')[0] || resource.text,
+              url: resource.url,
+              type: "documentation",
+            }))
+          : [
+              {
+                title: "Loading Resources...",
+                url: "#",
+                type: "documentation",
+              },
+            ],
+        quiz: [
+          // Mock quiz data - in a real application, you would retrieve quiz data from the backend
+          {
+            question: "Which of the following statements about this lesson is true?",
+            options: ["Option A", "Option B", "Option C", "Option D"],
+            correctAnswer: 1,
+          },
+          {
+            question: "What is the main topic covered in this lesson?",
+            options: ["Topic 1", "Topic 2", "Topic 3", "Topic 4"],
+            correctAnswer: 0,
+          },
+        ],
+      };
+    } else {
+      // Find the unit (with proper type checking)
+      const currentUnit = course.units.find(u => u.unit_number.toString() === unitId);
+      if (!currentUnit) {
+        throw new Error("Unit not found");
+      }
 
-  const lesson = {
-    id: lessonId,
-    title: currentLesson?.title || "Lesson",
-    type: currentLesson?.type || "lesson",
-    duration: currentLesson?.duration || "15 min",
-    course: {
-      id: courseId,
-      title: "Introduction to Python Programming",
-    },
-    unit: {
-      id: unitId,
-      title: "Getting Started with Python",
-      lessons,
-    },
-    content: `<h2>Installing Python and Setting Up the Development Environment</h2>
-      <p>Before you can start writing Python code, you need to set up your development environment. This lesson will guide you through installing Python and setting up a code editor.</p>
-
-      <h3>Step 1: Download Python</h3>
-      <p>Visit <a href="https://python.org" target="_blank">python.org</a> and download the latest stable version of Python for your operating system.</p>
-
-      <h4>For Windows:</h4>
-      <ul>
-        <li>Download the Windows installer from the Python website</li>
-        <li>Run the installer</li>
-        <li>Make sure to check the box that says "Add Python to PATH"</li>
-        <li>Click "Install Now"</li>
-      </ul>
-
-      <h4>For macOS:</h4>
-      <ul>
-        <li>Download the macOS installer from the Python website</li>
-        <li>Run the installer package</li>
-        <li>Follow the installation instructions</li>
-      </ul>
-
-      <h4>For Linux:</h4>
-      <p>Many Linux distributions come with Python pre-installed. To check if Python is installed, open a terminal and type:</p>
-      <pre><code>python3 --version</code></pre>
-      <p>If Python is not installed, you can install it using your distribution's package manager:</p>
-      <pre><code>sudo apt-get install python3    # For Ubuntu/Debian
-sudo dnf install python3      # For Fedora
-sudo pacman -S python         # For Arch Linux</code></pre>
-
-      <h3>Step 2: Verify Installation</h3>
-      <p>After installation, open a command prompt (Windows) or terminal (macOS/Linux) and type:</p>
-      <pre><code>python --version</code></pre>
-      <p>or</p>
-      <pre><code>python3 --version</code></pre>
-      <p>You should see the Python version number displayed, confirming that Python is installed correctly.</p>
-
-      <h3>Step 3: Choose a Code Editor</h3>
-      <p>While you can write Python code in any text editor, using a specialized code editor or IDE (Integrated Development Environment) will make your coding experience more productive. Here are some popular options:</p>
-
-      <h4>Visual Studio Code</h4>
-      <p>A lightweight but powerful source code editor with excellent Python support.</p>
-      <ul>
-        <li>Download from <a href="https://code.visualstudio.com/" target="_blank">code.visualstudio.com</a></li>
-        <li>Install the Python extension from the Extensions marketplace</li>
-      </ul>
-
-      <h4>PyCharm</h4>
-      <p>A full-featured Python IDE with a set of tools for productive Python development.</p>
-      <ul>
-        <li>Download from <a href="https://www.jetbrains.com/pycharm/" target="_blank">jetbrains.com/pycharm</a></li>
-        <li>Community Edition is free and great for beginners</li>
-      </ul>
-
-      <h4>IDLE</h4>
-      <p>A simple IDE that comes bundled with Python. It's good for beginners and simple projects.</p>
-      <ul>
-        <li>Already installed with Python</li>
-        <li>Provides basic editing and interactive features</li>
-      </ul>
-
-      <h3>Step 4: Create Your First Python File</h3>
-      <p>Once you have Python and a code editor installed, create a new file with the .py extension (e.g., hello.py) and write your first Python code:</p>
-      <pre><code>print("Hello, World!")</code></pre>
-      <p>Save the file and run it to see your first Python program in action!</p>
-
-      <h3>Conclusion</h3>
-      <p>Now that you have Python installed and a code editor set up, you're ready to start writing Python code. In the next lesson, we'll explore basic Python syntax and write our first program.</p>`, // Keep your long HTML lesson content here
-    video: {
-      url: "https://www.youtube.com/embed/YYXdXT2l-Gg",
-      title: "Python Tutorial: Installing Python & PyCharm",
-    },
-    resources: [
-      {
-        title: "Python Official Documentation",
-        url: "https://docs.python.org/3/",
-        type: "documentation",
-      },
-      {
-        title: "Visual Studio Code Setup Guide",
-        url: "https://code.visualstudio.com/docs/python/python-tutorial",
-        type: "guide",
-      },
-      {
-        title: "PyCharm Getting Started",
-        url: "https://www.jetbrains.com/help/pycharm/quick-start-guide.html",
-        type: "guide",
-      },
-    ],
-    quiz: [
-      {
-        question: "Which command can you use to check your Python version?",
-        options: ["python --check-version", "python --version", "python -v", "python -version"],
-        correctAnswer: 1,
-      },
-      {
-        question: "Which of the following is NOT a Python IDE or code editor mentioned in the lesson?",
-        options: ["Visual Studio Code", "PyCharm", "IDLE", "Eclipse"],
-        correctAnswer: 3,
-      },
-      {
-        question: "When installing Python on Windows, what important option should you check?",
-        options: ["Install for all users", "Add Python to PATH", "Install Python Launcher", "Create shortcuts"],
-        correctAnswer: 1,
-      },
-      {
-        question: "Which file extension is used for Python files?",
-        options: [".pyt", ".py", ".python", ".pyth"],
-        correctAnswer: 1,
-      },
-    ],
-  }
+      return {
+        id: currentLessonData.lesson || lessonId,
+        title: currentLessonData.lesson || "Lesson",
+        type: "lesson", // Default to lesson type if not specified
+        duration: currentLessonData.duration_in_min ? `${currentLessonData.duration_in_min} min` : "15 min",
+        course: {
+          id: courseId,
+          title: course.title,
+        },
+        unit: {
+          id: unitId,
+          title: currentUnit.title,
+          lessons: unitLessons,
+        },
+        content: currentLessonData.readings || "",
+        video: {
+          url: "https://www.youtube.com/embed/YYXdXT2l-Gg", // Default video URL
+          title: currentLessonData.lesson || "Tutorial",
+        },
+        resources: (currentLessonData.additional_resources || []).map((resource: Resource) => ({
+          title: resource.text.split(':')[0] || resource.text,
+          url: resource.url,
+          type: "documentation",
+        })),
+        quiz: [
+          // Mock quiz data since we don't have actual quiz content
+          {
+            question: "Which of the following statements about this lesson is true?",
+            options: ["Option A", "Option B", "Option C", "Option D"],
+            correctAnswer: 1,
+          },
+          {
+            question: "What is the main topic covered in this lesson?",
+            options: ["Topic 1", "Topic 2", "Topic 3", "Topic 4"],
+            correctAnswer: 0,
+          },
+        ],
+      };
+    }
+  };
+  
+  const lesson = getLessonData();
 
   const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({})
   const [quizSubmitted, setQuizSubmitted] = useState(false)
@@ -213,7 +365,7 @@ sudo pacman -S python         # For Arch Linux</code></pre>
 
   const handleQuizSubmit = () => {
     let correctCount = 0
-    lesson.quiz.forEach((question, index) => {
+    lesson.quiz.forEach((question: QuizQuestion, index: number) => {
       if (quizAnswers[index] === question.correctAnswer) {
         correctCount++
       }
@@ -228,24 +380,61 @@ sudo pacman -S python         # For Arch Linux</code></pre>
     }
   }
 
-  const markComplete = () => {
-    setIsCompleted(true)
-    const currentLessonIndex = lessons.findIndex((l) => l.id === Number.parseInt(lessonId as string))
-    if (currentLessonIndex !== -1) {
-      const updatedLessons = [...lessons]
-      updatedLessons[currentLessonIndex] = {
-        ...updatedLessons[currentLessonIndex],
-        status: "completed",
+  const markComplete = async () => {
+    // Already marked as complete
+    if (isCompleted) return;
+    
+    setIsCompleted(true);
+    
+    // In a real application, you would update the status in your backend
+    try {
+      // Get current user session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      
+      const token = session.access_token;
+      if (!token) return;
+      
+      // Call backend API to update lesson status (this is a mock endpoint - implement the actual endpoint)
+      // You would need to implement this API endpoint in your backend
+      /* 
+      await fetch(`http://localhost:8080/api/update_lesson_status`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          course_id: courseId,
+          unit_id: unitId,
+          lesson_id: lessonId,
+          status: "completed",
+        }),
+      });
+      */
+      
+      // Update local state
+      if (currentLessonData) {
+        setCurrentLessonData({
+          ...currentLessonData,
+          status: "completed",
+        });
       }
-      setLessons(updatedLessons)
+      
+      console.log("Lesson marked as complete");
+    } catch (error) {
+      console.error("Error marking lesson as complete:", error);
+      setIsCompleted(false); // Revert UI state if update fails
     }
   }
 
-  const currentModuleIndex = lessons.findIndex((m) => m.id === Number.parseInt(lessonId as string))
-  const prevModule = currentModuleIndex > 0 ? lessons[currentModuleIndex - 1] : null
-  const nextModule = currentModuleIndex < lessons.length - 1 ? lessons[currentModuleIndex + 1] : null
-
-  const totalLessons = lessons.length
+  // Calculate current lesson index and navigation links
+  const currentLessonIndex = parseInt(lessonId as string)
+  const totalLessons = unitLessons.length || fallbackLessons.length
+  
+  // Previous and next module links
+  const prevModule = currentLessonIndex > 0 ? { id: currentLessonIndex - 1 } : null
+  const nextModule = currentLessonIndex < totalLessons - 1 ? { id: currentLessonIndex + 1 } : null
 
   return (
     <AppShell>
@@ -285,7 +474,7 @@ sudo pacman -S python         # For Arch Linux</code></pre>
         <div className="h-1 bg-muted">
           <div
             className="h-full bg-primary transition-all"
-            style={{ width: `${((currentModuleIndex + 1) / totalLessons) * 100}%` }}
+            style={{ width: `${((currentLessonIndex + 1) / totalLessons) * 100}%` }}
           />
         </div>
 
@@ -297,12 +486,12 @@ sudo pacman -S python         # For Arch Linux</code></pre>
               <div className="sticky top-24 space-y-4">
                 <h3 className="font-medium">Unit Lessons</h3>
                 <ul className="space-y-2">
-                  {lesson.unit.lessons.map((m, index) => (
+                  {(unitLessons.length > 0 ? unitLessons : fallbackLessons).map((m: any, index: number) => (
                     <li key={index}>
                       <Link
-                        href={`/courses/${params.courseId}/lesson/${params.unitId}/${m.id}`}
+                        href={`/courses/${params.courseId}/lesson/${params.unitId}/${index}`}
                         className={`flex items-center gap-2 py-2 px-3 rounded-md text-sm ${
-                          m.id === Number.parseInt(lessonId as string)
+                          index === Number.parseInt(lessonId as string)
                             ? "bg-primary/10 text-primary font-medium"
                             : "hover:bg-muted/50"
                         }`}
@@ -310,7 +499,7 @@ sudo pacman -S python         # For Arch Linux</code></pre>
                         <span className="h-5 aspect-square rounded-full bg-muted/70 flex items-center justify-center text-xs font-medium">
                           {index + 1}
                         </span>
-                        <span className="whitespace-normal break-words leading-snug">{m.title}</span>
+                        <span className="whitespace-normal break-words leading-snug">{m.lesson || m.title}</span>
                       </Link>
                     </li>
                   ))}
@@ -428,13 +617,13 @@ sudo pacman -S python         # For Arch Linux</code></pre>
                       </p>
 
                       <div className="space-y-8">
-                        {lesson.quiz.map((question, qIndex) => (
+                        {lesson.quiz.map((question: QuizQuestion, qIndex: number) => (
                           <div key={qIndex} className="space-y-4">
                             <h3 className="font-medium">
                               {qIndex + 1}. {question.question}
                             </h3>
                             <div className="space-y-2">
-                              {question.options.map((option, oIndex) => (
+                              {question.options.map((option: string, oIndex: number) => (
                                 <div
                                   key={oIndex}
                                   className={`
@@ -524,7 +713,7 @@ sudo pacman -S python         # For Arch Linux</code></pre>
                     <h2 className="text-xl font-medium mb-6">Additional Resources</h2>
 
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {lesson.resources.map((resource, index) => (
+                      {lesson.resources.map((resource: {title: string, url: string, type: string}, index: number) => (
                         <a
                           key={index}
                           href={resource.url}
@@ -569,7 +758,7 @@ sudo pacman -S python         # For Arch Linux</code></pre>
             <List className="h-4 w-4" />
             <span>View All Lessons</span>
             <span>
-              {currentModuleIndex + 1}/{lesson.unit.lessons.length}
+              {currentLessonIndex + 1}/{totalLessons}
             </span>
           </Link>
         </Button>
