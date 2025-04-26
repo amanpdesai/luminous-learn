@@ -1,0 +1,386 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { parseISO, formatDistanceToNowStrict } from "date-fns"
+import {
+  BookOpen,
+  Clock,
+  FileText,
+  Plus,
+  Sparkles,
+  Zap,
+  Brain,
+  Layers,
+  PcCase,
+} from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Progress } from "@/components/ui/progress"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { supabase } from "@/lib/supabaseClient"
+
+export default function DashboardPage() {
+  const router = useRouter()
+  const [userData, setUserData] = useState<{ email: string | null; name: string | null; avatarUrl: string | null }>({
+    email: null,
+    name: null,
+    avatarUrl: null,
+  })
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) router.push("/auth")
+    }
+
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        setUserData({
+          email: user.email || null,
+          name:
+            user.user_metadata?.name ||
+            user.user_metadata?.full_name ||
+            user.user_metadata?.username ||
+            "User",
+          avatarUrl: user.user_metadata?.avatar_url || null,
+        })
+      }
+    }
+
+    checkAuth()
+    fetchUser()
+  }, [router])
+
+  return (
+    <div className="space-y-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-display">Welcome back, {userData.name}</h1>
+          <p className="text-muted-foreground">Continue your learning journey</p>
+        </div>
+        <div className="flex gap-3">
+          <Button className="glow-button" asChild>
+            <Link href="/courses"><Layers className="mr-2 h-4 w-4" /> My Courses</Link>
+          </Button>
+          <Button className="glow-button-pink bg-secondary hover:bg-secondary/90" asChild>
+            <Link href="/quick-learn"><Zap className="mr-2 h-4 w-4" /> Quick Learn</Link>
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {[
+          { title: "Courses Created", value: "12", icon: <PcCase className="h-4 w-4 text-primary" /> },
+          { title: "Lessons Completed", value: "87", icon: <BookOpen className="h-4 w-4 text-primary" /> },
+          { title: "Quick Learn Sessions", value: "24", icon: <Zap className="h-4 w-4 text-primary" /> },
+          { title: "Hours Learned", value: "32", icon: <Clock className="h-4 w-4 text-primary" /> },
+        ].map((stat, i) => (
+          <Card key={i} className="border-border/50">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">{stat.icon}</div>
+            </CardHeader>
+            <CardContent><div className="text-2xl font-bold">{stat.value}</div></CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Tabs defaultValue="courses" className="space-y-4">
+        <div className="-ml-1">
+          <TabsList className="inline-flex justify-center items-center px-1 py-5 bg-card border border-border rounded-full mb-6 z-10 relative shadow-sm w-fit mx-auto">
+            <TabsTrigger value="courses" className="px-7 py-4 text-base font-medium rounded-full transition-all text-muted-foreground hover:text-foreground data-[state=active]:text-white data-[state=active]:bg-primary/60 data-[state=active]:shadow data-[state=active]:glow-text">My Courses</TabsTrigger>
+            <TabsTrigger value="quick-learn" className="px-7 py-4 text-base font-medium rounded-full transition-all text-muted-foreground hover:text-foreground data-[state=active]:text-white data-[state=active]:bg-primary/60 data-[state=active]:shadow data-[state=active]:glow-text">Quick Learn</TabsTrigger>
+          </TabsList>
+        </div>
+
+        <TabsContent value="courses" className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[
+            {
+              title: "Intro to Python Programming",
+              description: "Learn the basics of Python",
+              progress: 65,
+              lastAccessed: "2025-04-22T12:00:00Z",
+              lessons: 12,
+              completed: 8,
+            },
+            {
+              title: "Web Dev Fundamentals",
+              description: "HTML, CSS, and JS basics",
+              progress: 30,
+              lastAccessed: "2025-04-21T08:00:00Z",
+              lessons: 15,
+              completed: 5,
+            },
+            {
+              title: "Data Science Essentials",
+              description: "Intro to data analysis",
+              progress: 10,
+              lastAccessed: "2025-04-15T10:00:00Z",
+              lessons: 20,
+              completed: 2,
+            },
+          ].map((course, index) => {
+            const isDraft = course.title.startsWith("DRAFT:")
+            const cleanTitle = isDraft ? course.title.replace(/^DRAFT:\s*/, "") : course.title
+
+            return (
+              <Card key={index} className="border-border/50 card-hover group">
+                <CardHeader className="pb-3">
+                  {isDraft ? (
+                    <span className="text-[10px] uppercase text-yellow-500 font-semibold tracking-widest mb-1 block">
+                      Draft
+                    </span>
+                  ) : (
+                    <div className="flex items-center gap-2 text-xs text-primary mb-1.5">
+                      <BookOpen className="h-3.5 w-3.5" />
+                      <span>Course</span>
+                    </div>
+                  )}
+                  <CardTitle className="text-lg group-hover:text-primary transition-colors line-clamp-1">
+                    {cleanTitle}
+                  </CardTitle>
+                  <CardDescription className="mt-1.5 line-clamp-2">{course.description}</CardDescription>
+                </CardHeader>
+                <CardContent className="pb-3">
+                  <div className="space-y-4">
+                    {!isDraft && (
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-xs">
+                          <span>Progress</span>
+                          <span className="text-primary font-medium">{course.progress}%</span>
+                        </div>
+                        <Progress value={course.progress} className="h-2" />
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="flex items-center gap-1.5">
+                        <BookOpen className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">{course.lessons} lessons</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 justify-end">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">
+                          {formatDistanceToNowStrict(parseISO(course.lastAccessed), { addSuffix: true })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="pt-3">
+                  <Button className="glow-button bg-primary hover:bg-primary/90 w-full" asChild>
+                    <Link href={`/courses/${index}`}>Continue</Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+            )
+          })}
+
+          {/* Create Card */}
+          <Card className="border-border/50 border-dashed bg-muted/50 card-hover">
+            <CardContent className="flex flex-col items-center justify-center h-full py-10">
+              <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <Plus className="h-7 w-7 text-primary" />
+              </div>
+              <h3 className="text-lg font-medium mb-2">Create New Course</h3>
+              <p className="text-sm text-muted-foreground text-center mb-5 max-w-xs">
+                Generate a personalized learning experience with AI-powered course creation
+              </p>
+              <Button className="glow-button" asChild>
+                <Link href="/courses/create">
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Create Course
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="quick-learn" className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[
+            {
+              title: "JavaScript Promises",
+              description: "Understanding asynchronous programming",
+              date: "2025-04-20T15:00:00Z",
+              duration: "15 min",
+              progress: 80,
+              totalLessons: 5,
+            },
+            {
+              title: "CSS Grid Layout",
+              description: "Modern web layouts with CSS Grid",
+              date: "2025-04-14T10:00:00Z",
+              duration: "10 min",
+              progress: 100,
+              totalLessons: 4,
+            },
+            {
+              title: "React Hooks",
+              description: "Using useState and useEffect",
+              date: "2025-04-21T09:00:00Z",
+              duration: "20 min",
+              progress: 60,
+              totalLessons: 3,
+            },
+          ].map((session, index) => (
+            <Card key={index} className="border-border/50 card-hover group">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2 text-xs text-secondary mb-1.5">
+                  <Zap className="h-3.5 w-3.5" />
+                  <span>Quick Learn</span>
+                </div>
+                <CardTitle className="text-lg group-hover:text-secondary transition-colors truncate">
+                  {session.title}
+                </CardTitle>
+                <CardDescription className="mt-1.5 line-clamp-2">{session.description}</CardDescription>
+              </CardHeader>
+              <CardContent className="pb-3 space-y-3">
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">{session.duration}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 justify-end">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">
+                      {formatDistanceToNowStrict(parseISO(session.date), { addSuffix: true })}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <Progress value={session.progress} className="h-1.5 bg-secondary/10 [&>div]:bg-secondary" />
+                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                    <span>{session.progress}% complete</span>
+                    <span>{session.totalLessons} lessons</span>
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className="pt-3">
+                <Button className="glow-button-pink bg-secondary hover:bg-secondary/90 w-full" asChild>
+                  <Link href={`/quick-learn/${index}`}>Continue</Link>
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
+
+          {/* Create New Quick Learn Card */}
+          <Card className="border-border/50 border-dashed bg-muted/50 card-hover">
+            <CardContent className="flex flex-col items-center justify-center h-full py-10">
+              <div className="h-14 w-14 rounded-full bg-secondary/10 flex items-center justify-center mb-4">
+                <Zap className="h-7 w-7 text-secondary" />
+              </div>
+              <h3 className="text-lg font-medium mb-2">Quick Learn</h3>
+              <p className="text-sm text-muted-foreground text-center mb-5 max-w-xs">
+                Create a focused single-topic lesson in minutes
+              </p>
+              <Button className="glow-button-pink bg-secondary hover:bg-secondary/90" asChild>
+                <Link href="/quick-learn/create">
+                  <Zap className="mr-2 h-4 w-4" />
+                  Start Quick Learn
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Recent Activity & Suggested Topics */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="border-border/50">
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+            <CardDescription>Your learning activity from the past week</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {[{
+                title: "Completed Lesson",
+                description: "Variables and Data Types in Python",
+                time: "2 hours ago",
+                icon: <CheckIcon className="h-4 w-4 text-green-500" />,
+              }, {
+                title: "Created Flashcards",
+                description: "JavaScript Fundamentals",
+                time: "Yesterday",
+                icon: <BookOpen className="h-4 w-4 text-primary" />,
+              }, {
+                title: "Quick Learn Session",
+                description: "CSS Flexbox Layout",
+                time: "2 days ago",
+                icon: <Zap className="h-4 w-4 text-secondary" />,
+              }, {
+                title: "Created Course",
+                description: "Data Science Essentials",
+                time: "1 week ago",
+                icon: <Sparkles className="h-4 w-4 text-primary" />,
+              }].map((activity, index) => (
+                <div key={index} className="flex items-start gap-4">
+                  <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center mt-0.5">{activity.icon}</div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">{activity.title}</p>
+                    <p className="text-sm text-muted-foreground">{activity.description}</p>
+                    <p className="text-xs text-muted-foreground">{activity.time}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/50">
+          <CardHeader>
+            <CardTitle>Suggested Topics</CardTitle>
+            <CardDescription>Based on your learning history</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {[{
+                title: "Machine Learning Basics",
+                description: "Intro to ML algorithms",
+                icon: <Brain className="h-4 w-4 text-primary" />,
+              }, {
+                title: "Advanced CSS Techniques",
+                description: "Animations, transitions, etc.",
+                icon: <Sparkles className="h-4 w-4 text-secondary" />,
+              }, {
+                title: "React State Management",
+                description: "Context, Redux & more",
+                icon: <Zap className="h-4 w-4 text-primary" />,
+              }, {
+                title: "Python Data Analysis",
+                description: "Pandas and Numpy",
+                icon: <FileText className="h-4 w-4 text-secondary" />,
+              }].map((topic, index) => (
+                <div key={index} className="flex items-start gap-4">
+                  <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center mt-0.5">{topic.icon}</div>
+                  <div className="space-y-1 flex-1">
+                    <p className="text-sm font-medium">{topic.title}</p>
+                    <p className="text-sm text-muted-foreground">{topic.description}</p>
+                  </div>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <Plus className="h-4 w-4" />
+                    <span className="sr-only">Add topic</span>
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button variant="outline" className="w-full">View All Suggestions</Button>
+          </CardFooter>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
+function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  )
+}
