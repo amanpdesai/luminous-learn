@@ -6,7 +6,6 @@ import Link from "next/link"
 import { AppShell } from "@/components/layout/app-shell"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
 import { Input } from "@/components/ui/input"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
@@ -94,7 +93,7 @@ export default function LearnViewPage() {
     setSessionStats({ correct: 0, incorrect: 0, skipped: 0, total: generated.length })
 
     setTimeout(() => setIsLoading(false), 400)
-  }, [type, id])
+  }, [isCourse, type, id])
 
   const current = questions[currentQuestionIndex]
 
@@ -398,7 +397,7 @@ export default function LearnViewPage() {
                     <>
                       <Button variant="outline" onClick={skipQuestion} className="w-full sm:w-auto gap-2">
                         <HelpCircle className="h-4 w-4" />
-                        Don't Know
+                        Don&apos;t Know
                       </Button>
                       <Button
                         className="glow-button w-full sm:w-auto gap-2"

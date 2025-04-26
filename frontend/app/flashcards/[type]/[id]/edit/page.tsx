@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { ArrowLeft, GripVertical, Save, Trash2, X } from "lucide-react"
+import { ArrowLeft, BookOpen, GripVertical, Save, Trash2, X, Zap } from "lucide-react"
 import {
   DndContext,
   closestCenter,
@@ -28,7 +28,6 @@ import { CSS } from "@dnd-kit/utilities"
 function SortableCard({
   id,
   card,
-  index,
   onUpdate,
   onDelete,
 }: {
@@ -103,7 +102,6 @@ function SortableCard({
 
 export default function EditFlashcardsPage() {
   const params = useParams() as { type: string; id: string } ;
-  const { type, id } = params
   const router = useRouter()
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -255,6 +253,22 @@ export default function EditFlashcardsPage() {
             <p className="text-muted-foreground">Customize your flashcards for optimal learning</p>
           </div>
 
+          <div className="mt-3 flex items-center gap-2 text-xs font-medium px-3 py-1 rounded-full w-fit border select-none 
+            border-border shadow-sm
+            bg-muted/50 text-muted-foreground">
+            {isCourse ? (
+              <>
+                <BookOpen className="w-3.5 h-3.5 text-primary" />
+                <span className="text-primary">Category: Course</span>
+              </>
+            ) : (
+              <>
+                <Zap className="w-3.5 h-3.5 text-secondary" />
+                <span className="text-secondary">Category: Quick Learn</span>
+              </>
+            )}
+          </div>
+
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium block mb-2">Flashcard Set Title</label>
@@ -269,7 +283,7 @@ export default function EditFlashcardsPage() {
           <div className="pt-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-medium">Flashcards</h2>
-              <Button onClick={handleAddCard} className="glow-button">Add Card</Button>
+              <Button onClick={handleAddCard} className={isCourse ? "glow-button" : "glow-button-pink"} variant={isCourse ? "default" : "secondary"}>Add Card</Button>
             </div>
 
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -292,7 +306,7 @@ export default function EditFlashcardsPage() {
             {flashcards.length === 0 && (
               <div className="text-center py-12 border border-dashed border-border rounded-lg">
                 <p className="text-muted-foreground">
-                  No flashcards yet. Click "Add Card" to create your first flashcard.
+                  No flashcards yet. Click &ldquo;Add Card&ldquo; to create your first flashcard.
                 </p>
               </div>
             )}
@@ -300,8 +314,8 @@ export default function EditFlashcardsPage() {
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-sm border-t border-border z-10">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex justify-end gap-4">
+      <div className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-sm border-t border-border z-5">
+        <div className="max-w-4xl mx-auto px-4 py-4 flex justify-end gap-6">
           <Button variant="outline" onClick={() => router.push("/flashcards")} className="gap-2">
             <X className="h-4 w-4" /> Cancel
           </Button>
@@ -313,7 +327,8 @@ export default function EditFlashcardsPage() {
               !title.trim() ||
               flashcards.some((c) => !c.front.trim() || !c.back.trim())
             }
-            className="glow-button gap-2"
+            className={isCourse ? "glow-button gap-2" : "glow-button-secondary gap-2"}
+            variant={isCourse ? "default" : "secondary"}
           >
             <Save className="h-4 w-4" /> {isSaving ? "Saving..." : "Save Flashcards"}
           </Button>
