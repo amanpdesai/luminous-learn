@@ -26,6 +26,27 @@ type Course = {
   currentLesson: number
 }
 
+type RawCourse = {
+  id: string
+  title?: string
+  description?: string
+  created_at?: string
+  last_accessed?: string
+  completed?: number
+  is_draft?: boolean
+  unit_lessons?: {
+    lesson: string
+    unit_number: number
+    status: string
+  }[]
+  units?: {
+    unit_number: number
+    lesson_outline: {
+      lesson: string
+    }[]
+  }[]
+}
+
 type SortOption = "progress_asc" | "progress_desc" | "lessons_asc" | "lessons_desc" | "lastAccessed_asc" | "lastAccessed_desc"
 
 export default function CoursesPage() {
@@ -71,7 +92,7 @@ export default function CoursesPage() {
     
         const rawCourses = await response.json()
     
-        const shapedCourses = rawCourses.map((course: any) => {
+        const shapedCourses = (rawCourses as RawCourse[]).map((course) => {
           const totalLessons = course.unit_lessons?.length ?? 0
           const completedLessons = course.completed ?? 0
           const isDraft = course.is_draft === true
@@ -83,8 +104,8 @@ export default function CoursesPage() {
           // If we have unit_lessons, find the first incomplete lesson
           if (Array.isArray(course.unit_lessons) && course.unit_lessons.length > 0) {
             const incompleteLesson = course.unit_lessons.find(
-              (lesson: any) => lesson.status !== "completed"
-            )
+              (lesson: NonNullable<RawCourse["unit_lessons"]>[number]) => lesson.status !== "completed"
+            )            
             
             if (incompleteLesson) {
               // Use the first incomplete lesson
@@ -93,13 +114,13 @@ export default function CoursesPage() {
               // Find the index of this lesson within its unit
               if (Array.isArray(course.units)) {
                 const unitIndex = course.units.findIndex(
-                  (unit: any) => unit.unit_number === currentUnit
-                )
+                  (unit: NonNullable<RawCourse["units"]>[number]) => unit.unit_number === currentUnit
+                )                
                 
                 if (unitIndex >= 0 && Array.isArray(course.units[unitIndex]?.lesson_outline)) {
                   const lessonIndex = course.units[unitIndex].lesson_outline.findIndex(
-                    (outline: any) => outline.lesson === incompleteLesson.lesson
-                  )
+                    (outline: NonNullable<RawCourse["units"]>[number]["lesson_outline"][number]) => outline.lesson === incompleteLesson.lesson
+                  )                  
                   
                   if (lessonIndex >= 0) {
                     currentLesson = lessonIndex

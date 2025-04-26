@@ -105,7 +105,7 @@ type LessonData = {
   unit: {
     id: string | string[]
     title: string
-    lessons: any[]
+    lessons: (LessonComplete | FallbackLesson)[]
   }
   content: string
   video: {
@@ -214,7 +214,7 @@ export default function ModulePage() {
   }, [courseId, unitId, lessonId, router])
 
   // Mock lessons data for fallback
-  const [fallbackLessons, setFallbackLessons] = useState<FallbackLesson[]>([
+  const [fallbackLessons] = useState<FallbackLesson[]>([
     {
       id: 1,
       title: "Installing Python and Setting Up the Development Environment",
@@ -459,7 +459,7 @@ export default function ModulePage() {
   const nextModule = currentLessonIndex < totalLessons - 1 ? { id: currentLessonIndex + 1 } : null
 
   if (pageLoading){
-    return (<AppShell><DashboardLoading></DashboardLoading></AppShell>)
+    return (<AppShell><DashboardLoading></DashboardLoading></AppShell>);
   }
 
   return (
@@ -512,7 +512,7 @@ export default function ModulePage() {
               <div className="sticky top-24 space-y-4">
                 <h3 className="font-medium">Unit Lessons</h3>
                 <ul className="space-y-2">
-                  {(unitLessons.length > 0 ? unitLessons : fallbackLessons).map((m: any, index: number) => (
+                  {(unitLessons.length > 0 ? unitLessons : fallbackLessons).map((m: LessonComplete | FallbackLesson, index: number) => (
                     <li key={index}>
                       <Link
                         href={`/courses/${params.courseId}/lesson/${params.unitId}/${index}`}
@@ -525,7 +525,9 @@ export default function ModulePage() {
                         <span className="h-5 aspect-square rounded-full bg-muted/70 flex items-center justify-center text-xs font-medium">
                           {index + 1}
                         </span>
-                        <span className="whitespace-normal break-words leading-snug">{m.lesson || m.title}</span>
+                        <span className="whitespace-normal break-words leading-snug">{
+          'lesson' in m ? m.lesson : m.title
+        }</span>
                       </Link>
                     </li>
                   ))}

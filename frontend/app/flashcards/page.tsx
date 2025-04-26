@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { formatDistanceToNowStrict, parseISO } from "date-fns"
+import { formatDistanceToNowStrict } from "date-fns"
 
 export default function FlashcardsPage() {
   const router = useRouter()
@@ -38,14 +38,14 @@ export default function FlashcardsPage() {
         const resCourses = await fetch("http://localhost:8080/api/flashcard_sets?type=course", {
           headers: { Authorization: `Bearer ${token}` },
         })
-        let courseSetsData = await resCourses.json()
+        let courseSetsData: FlashcardSet[] = await resCourses.json()
         console.log('Course API response:', courseSetsData)
         
         // Ensure we're only setting course type flashcards
-        courseSetsData = (courseSetsData || []).filter((set: any) => set.source_type === 'course').map((set: any) => ({
+        courseSetsData = (courseSetsData || []).filter((set): set is FlashcardSet => set.source_type === 'course').map((set) => ({
           ...set,
-          flashcards: set.flashcards?.flashcards ?? []
-        }))
+          flashcards: set.flashcards ?? []
+        }))        
         console.log('Filtered course sets:', courseSetsData)
         setCourseSets(courseSetsData)
   
@@ -53,14 +53,14 @@ export default function FlashcardsPage() {
         const resQuickLearns = await fetch("http://localhost:8080/api/flashcard_sets?type=quick-learn", {
           headers: { Authorization: `Bearer ${token}` },
         })
-        let quickLearnSetsData = await resQuickLearns.json()
+        let quickLearnSetsData: FlashcardSet[] = await resQuickLearns.json()
         console.log('Quick Learn API response:', quickLearnSetsData)
         
         // Ensure we're only setting quick-learn type flashcards
-        quickLearnSetsData = (quickLearnSetsData || []).filter((set: any) => set.source_type === 'quick-learn').map((set: any) => ({
+        quickLearnSetsData = (quickLearnSetsData || []).filter((set): set is FlashcardSet => set.source_type === 'quick-learn').map((set) => ({
           ...set,
-          flashcards: set.flashcards?.flashcards ?? []
-        }))
+          flashcards: set.flashcards ?? []
+        }))        
         console.log('Filtered quick-learn sets:', quickLearnSetsData)
         setQuickLearnSets(quickLearnSetsData)
   

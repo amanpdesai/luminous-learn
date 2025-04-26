@@ -11,7 +11,6 @@ import {
   Plus,
   Sparkles,
   Zap,
-  Brain,
   Layers,
   PcCase,
 } from "lucide-react"
@@ -21,6 +20,22 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { supabase } from "@/lib/supabaseClient"
+
+type CourseType = {
+  id: string
+  title: string
+  completed: number
+  lessons: number
+  last_accessed: string
+}
+
+type QuickLearnType = {
+  id: string
+  title: string
+  completed: number
+  duration: string
+  last_accessed: string
+}
 
 export default function DashboardPage() {
   const [pageLoading, setPageLoading] = useState(true)
@@ -33,8 +48,8 @@ export default function DashboardPage() {
     avatarUrl: null,
   })
 
-  const [courses, setCourses] = useState<any[]>([])
-  const [quickLearns, setQuickLearns] = useState<any[]>([])
+  const [courses, setCourses] = useState<CourseType[]>([])
+  const [quickLearns, setQuickLearns] = useState<QuickLearnType[]>([])
   const [loadingCourses, setLoadingCourses] = useState(false)
   const [loadingQuickLearns, setLoadingQuickLearns] = useState(false)
 
@@ -160,8 +175,8 @@ export default function DashboardPage() {
           ) : (
             <>
               {courses.length > 0 ? (
-                courses.map((course, index) => (
-          <CourseCard key={course.id} course={course} index={index} />
+                courses.map((course) => (
+          <CourseCard key={course.id} course={course} />
         ))
       ) : null}
       <CreateNewCourseCard />
@@ -176,8 +191,8 @@ export default function DashboardPage() {
           ) : (
             <>
               {quickLearns.length > 0 ? (
-                quickLearns.map((ql, index) => (
-          <QuickLearnCard key={ql.id} session={ql} index={index} />
+                quickLearns.map((ql) => (
+          <QuickLearnCard key={ql.id} session={ql} />
         ))
       ) : null}
       <CreateNewQuickLearnCard />
@@ -222,7 +237,7 @@ function LoadingCards() {
   )
 }
 
-function CourseCard({ course, index }: { course: any, index: number }) {
+function CourseCard({ course }: { course: CourseType }) {
   return (
     <Card className="border-border/50 card-hover group">
       <CardHeader className="pb-3">
@@ -267,7 +282,7 @@ function CourseCard({ course, index }: { course: any, index: number }) {
   )
 }
 
-function QuickLearnCard({ session, index }: { session: any, index: number }) {
+function QuickLearnCard({ session }: { session: QuickLearnType }) {
   return (
     <Card className="border-border/50 card-hover group">
       <CardHeader className="pb-3">

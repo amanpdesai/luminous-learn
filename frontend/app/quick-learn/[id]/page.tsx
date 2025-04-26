@@ -7,7 +7,7 @@ import { AppShell } from "@/components/layout/app-shell"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, Clock, FileText, Lightbulb, Loader2, Sparkles, Zap } from "lucide-react"
+import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, Clock, FileText, Lightbulb, Sparkles, Zap } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { MarkdownRenderer } from "@/components/ui/markdown-render"
 import TurndownService from "turndown"
@@ -62,8 +62,6 @@ export default function QuickLearnPage() {
   const [currentSection, setCurrentSection] = useState(0)
   const [isCompleted, setIsCompleted] = useState(false)
   const [activeTab, setActiveTab] = useState("content")
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [session, setSession] = useState<QuickLearnData | null>(null)
   const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({})
   const [quizSubmitted, setQuizSubmitted] = useState(false)
@@ -84,9 +82,6 @@ export default function QuickLearnPage() {
       }
     }
     const fetchQuickLearn = async () => {
-      setLoading(true)
-      setError(null)
-    
       try {
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) {
@@ -106,7 +101,6 @@ export default function QuickLearnPage() {
         if (!response.ok) {
           const errorData = await response.json().catch(() => null)
           console.error(`API error: ${errorData?.error || response.statusText}`)
-          setError(`Error ${response.status}: ${response.statusText}`)
           return
         }
     
@@ -114,7 +108,6 @@ export default function QuickLearnPage() {
     
         if (!data || !data.title || !data.sections) {
           console.error('Invalid data format received from server', data)
-          setError('Invalid data format received from server')
           return
         }
     
@@ -131,11 +124,8 @@ export default function QuickLearnPage() {
           userId: data.user_id,
           estimated_duration_minutes: data.estimated_duration_minutes
         })
-      } catch (err: any) {
+      } catch (err) {
         console.error('Error fetching quick learn:', err)
-        setError(err.message || 'Failed to load quick learn session')
-      } finally {
-        setLoading(false)
       }
     }    
     checkAuth()
@@ -173,7 +163,6 @@ export default function QuickLearnPage() {
 
   const handleQuizSubmit = () => {
     if (!session?.assessment || !session.assessment.questions.length) {
-      setError('Assessment data is not available')
       return
     }
 

@@ -83,36 +83,34 @@ export default function FlashcardSetPage() {
 
     fetchFlashcards()
   }, [params.type, params.id, router])
+  
+  let stillLearning = 0
+  let stillStudying = 0
+  let mastered = 0
 
-  const total = flashcards.length
-  // ✨ New calculation logic for progress breakdown
-let stillLearning = 0
-let stillStudying = 0
-let mastered = 0
+  flashcards.forEach((card) => {
+    const correct = card.correct ?? 0
+    const incorrect = card.incorrect ?? 0
+    const totalAttempts = correct + incorrect
 
-flashcards.forEach((card) => {
-  const correct = card.correct ?? 0
-  const incorrect = card.incorrect ?? 0
-  const totalAttempts = correct + incorrect
-
-  if (totalAttempts === 0) {
-    stillLearning += 1
-  } else {
-    const accuracy = correct / totalAttempts
-
-    if (accuracy < 0.5) {
+    if (totalAttempts === 0) {
       stillLearning += 1
-    } else if (accuracy < 0.85) {
-      stillStudying += 1
     } else {
-      if (correct >= 3) {
-        mastered += 1
-      } else {
+      const accuracy = correct / totalAttempts
+
+      if (accuracy < 0.5) {
+        stillLearning += 1
+      } else if (accuracy < 0.85) {
         stillStudying += 1
+      } else {
+        if (correct >= 3) {
+          mastered += 1
+        } else {
+          stillStudying += 1
+        }
       }
     }
-  }
-})
+  })
 
 const progressData = {
   stillLearning,

@@ -88,7 +88,6 @@ export default function CoursePage() {
   })
   const router = useRouter()
   const [course, setCourse] = useState<Course | null>(null)
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -136,15 +135,13 @@ export default function CoursePage() {
         setCourse(rawCourse)
       } catch (err) {
         console.error("Error fetching course:", err)
-      } finally {
-        setLoading(false)
       }
     }
     checkAuth()
     Promise.all([
       fetchCourse()
     ]).finally(() => setPageLoading(false));
-  }, [params.courseId])
+  }, [params.courseId, router])
   
 
   // Calculate total lessons from lesson_outline count

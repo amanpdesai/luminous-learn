@@ -11,9 +11,26 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { ArrowLeft, Check, Loader2, Sparkles, X } from "lucide-react"
 import { supabase } from "@/lib/supabaseClient"
-import { Progress } from "@/components/ui/progress"
 
 type QuestionType = "multiple-choice" | "typed-response" | "true-false"
+
+interface Flashcard {
+  id: string
+  multiplechoice: {
+    question: string
+    correct_choice: string
+    choices: string[]
+  }
+  freeresponse: {
+    question: string
+    answer: string
+  }
+  trueorfalseq: {
+    question: string
+    answer: boolean
+  }
+}
+
 
 interface Question {
   cardId: string
@@ -69,7 +86,7 @@ export default function LearnViewPage() {
 
         const flashcards = data.flashcard_set?.flashcards?.flashcards || []
 
-        const generated: Question[] = flashcards.map((card: any) => {
+        const generated: Question[] = flashcards.map((card: Flashcard) => {
           const availableTypes = [
             { type: "multiple-choice" as QuestionType, available: !!card.multiplechoice?.question },
             { type: "typed-response" as QuestionType, available: !!card.freeresponse?.question },

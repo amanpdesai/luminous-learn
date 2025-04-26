@@ -6,7 +6,7 @@ import { AppShell } from "@/components/layout/app-shell"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
-import { ArrowLeft, ArrowRight, Check, RotateCcw, Shuffle, Sparkles, X } from "lucide-react"
+import { ArrowLeft, ArrowRight, RotateCcw, Shuffle, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabaseClient"
 
@@ -42,7 +42,6 @@ export default function FlashcardsViewPage() {
   const [shuffled, setShuffled] = useState(false)
   const [hideAnswers, setHideAnswers] = useState(false)
   const [autoProgress, setAutoProgress] = useState(true)
-  const [knownCards, setKnownCards] = useState<Set<number>>(new Set())
 
   const router = useRouter()
 
@@ -96,15 +95,6 @@ export default function FlashcardsViewPage() {
   }
 
   const handleFlip = () => setFlipped(!flipped)
-
-  const toggleKnown = () => {
-    const updated = new Set(knownCards)
-    if (knownCards.has(currentCard))
-      updated.delete(currentCard)
-    else
-      updated.add(currentCard)
-    setKnownCards(updated)
-  }
 
   const toggleShuffle = () => {
     setShuffled(!shuffled)

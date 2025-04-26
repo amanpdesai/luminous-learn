@@ -2,12 +2,14 @@
 
 import React, { useState, useEffect, ReactNode } from "react"
 import ReactMarkdown from "react-markdown"
+import { Components } from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkMath from "remark-math"
 import rehypeKatex from "rehype-katex"
 import rehypeRaw from "rehype-raw"
 import rehypeHighlight from "rehype-highlight"
 import { Copy } from "lucide-react"
+import { Element } from "hast"
 
 import "highlight.js/styles/github-dark.css"
 import "katex/dist/katex.min.css"
@@ -32,14 +34,15 @@ const mathStyles = `
   }
 `
 
-const containsPre = (node: any): boolean => {
-  if (!node) return false
+// Typing node properly as Element from "hast"
+const containsPre = (node: unknown): boolean => {
+  if (!node || typeof node !== "object" || !("type" in node)) return false
 
-  const n = node as any
+  const n = node as Element
 
   if (n.tagName === "pre") return true
   if (Array.isArray(n.children)) {
-    return n.children.some((child: any) => containsPre(child))
+    return n.children.some((child) => containsPre(child))
   }
   return false
 }
@@ -93,7 +96,6 @@ interface MarkdownRendererProps {
 
 export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
   useEffect(() => {
-    // Only inject styles once
     if (!document.getElementById('math-renderer-styles')) {
       const styleEl = document.createElement('style')
       styleEl.id = 'math-renderer-styles'
@@ -116,13 +118,12 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
           code: CodeBlock,
           p: ({ node, children, ...props }) => {
             if (containsPre(node)) return <>{children}</>
-          
             return (
               <p className="mb-4 whitespace-pre-wrap" {...props}>
                 {children}
               </p>
             )
-          },          
+          },
           h1: ({ children }) => <h1 className="text-2xl font-bold mt-6 mb-3">{children}</h1>,
           h2: ({ children }) => <h2 className="text-xl font-bold mt-5 mb-2">{children}</h2>,
           h3: ({ children }) => <h3 className="text-lg font-semibold mt-4 mb-2">{children}</h3>,
@@ -141,7 +142,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
           th: ({ children }) => <th className="border border-zinc-700 bg-zinc-800 px-4 py-2">{children}</th>,
           td: ({ children }) => <td className="border border-zinc-700 px-4 py-2">{children}</td>,
           br: () => <br className="my-2" />,
-        }}
+        } as Components}
       >
         {content}
       </ReactMarkdown>

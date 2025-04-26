@@ -11,6 +11,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, BookOpen, Sparkles, Zap } from "lucide-react"
 import { supabase } from "@/lib/supabaseClient"
 
+interface SourceItem {
+  id: string
+  title: string
+  completed: number
+  last_accessed: string
+  unit_lessons?: { length: number }[]
+}
+
+
 export default function CreateFlashcardsPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -20,8 +29,8 @@ export default function CreateFlashcardsPage() {
   const [learningGoal, setLearningGoal] = useState("deep-understanding")
   const [isGenerating, setIsGenerating] = useState(false)
   const [tab, setTab] = useState(searchParams.get("tab") || "courses")
-  const [courses, setCourses] = useState<any[]>([])
-  const [quickLearns, setQuickLearns] = useState<any[]>([])
+  const [courses, setCourses] = useState<SourceItem[]>([])
+  const [quickLearns, setQuickLearns] = useState<SourceItem[]>([])
   const [loadingCourses, setLoadingCourses] = useState(true)
   const [loadingQuickLearns, setLoadingQuickLearns] = useState(true)
 
@@ -39,15 +48,16 @@ export default function CreateFlashcardsPage() {
         const resCourses = await fetch("http://localhost:8080/api/get_user_courses", {
           headers: { Authorization: `Bearer ${token}` },
         })
-        const coursesData = await resCourses.json()
-        setCourses(coursesData || [])
-  
+        const coursesData: SourceItem[] = await resCourses.json()
+        setCourses(coursesData ?? [])
+
         setLoadingQuickLearns(true)
+        
         const resQuickLearns = await fetch("http://localhost:8080/api/quick_learns", {
           headers: { Authorization: `Bearer ${token}` },
         })
-        const quickLearnsData = await resQuickLearns.json()
-        setQuickLearns(quickLearnsData || [])
+        const quickLearnsData: SourceItem[] = await resQuickLearns.json()
+        setQuickLearns(quickLearnsData ?? [])
         
       } catch (error) {
         console.error("Error fetching:", error)
@@ -182,18 +192,18 @@ export default function CreateFlashcardsPage() {
                                 <div className="flex-1 min-w-0">
                                   <h3 className="font-medium text-sm line-clamp-1">{item.title}</h3>
                                   <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
-                                  <span>
-                                    {item.unit_lessons?.length > 0 
-                                      ? `${Math.round((item.completed / item.unit_lessons.length) * 100)}% complete`
-                                      : "0% complete"}
-                                  </span>
+                                    <span>
+                                      {(item.unit_lessons && item.unit_lessons.length > 0) 
+                                        ? `${Math.round((item.completed / item.unit_lessons.length) * 100)}% complete`
+                                        : "0% complete"}
+                                    </span>
                                     <span>{new Date(item.last_accessed).toLocaleDateString()}</span>
                                   </div>
                                   <div className="mt-2 h-1.5 w-full bg-muted rounded-full overflow-hidden">
                                     <div
                                       className={`h-full ${isCourse ? "bg-primary" : "bg-secondary"}`}
-                                      style={{ width: `${item.unit_lessons?.length > 0 
-                                        ? (item.completed / item.unit_lessons.length) * 100 
+                                      style={{ width: `${(item.unit_lessons?.length || 0) > 0
+                                        ? (item.completed / (item.unit_lessons?.length || 0)) * 100
                                         : 0}%` }}                                      
                                     />
                                   </div>
