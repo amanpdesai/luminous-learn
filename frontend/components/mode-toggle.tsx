@@ -19,18 +19,18 @@ export function ModeToggle() {
   useEffect(() => {
     const activeTheme = theme === "system" ? systemTheme : theme
     if (theme === "system") {
-      setCurrentIcon(<Globe className="h-[1.2rem] w-[1.2rem]" />)
+      setCurrentIcon(<Globe className="!h-[1.3rem] !w-[1.3rem]" />)
     } else if (activeTheme === "dark") {
-      setCurrentIcon(<Moon className="h-[1.2rem] w-[1.2rem]" />)
+      setCurrentIcon(<Moon className="!h-[1.3rem] !w-[1.3rem]" />)
     } else {
-      setCurrentIcon(<Sun className="h-[1.2rem] w-[1.2rem]" />)
+      setCurrentIcon(<Sun className="!h-[1.3rem] !w-[1.3rem]" />)
     }
   }, [theme, systemTheme])
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="icon" className="h-9 w-9 rounded-full">
+        <Button variant="outline" size="icon" className="!h-9 !w-9 rounded-full">
           {currentIcon}
           <span className="sr-only">Toggle theme</span>
         </Button>

@@ -13,7 +13,6 @@ import {
   FolderOpen,
   Lightbulb,
   Play,
-  User,
   Video,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -25,7 +24,6 @@ import { useParams } from "next/navigation"
 
 export default function CoursePage() {
   const params = useParams()
-  const { courseId } = params
   // State to track which units are expanded
   const [expandedUnits, setExpandedUnits] = useState<Record<number, boolean>>({
     0: true, // First unit expanded by default

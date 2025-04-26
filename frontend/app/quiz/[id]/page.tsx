@@ -6,13 +6,27 @@ import { Progress } from "@/components/ui/progress"
 import { AppShell } from "@/components/layout/app-shell"
 import { ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight, Clock, FileText, XCircle } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import { supabase } from "@/lib/supabaseClient"
 
 export default function QuizPage({ params }: { params: { id: string } }) {
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({})
   const [showResults, setShowResults] = useState(false)
   const [timeRemaining] = useState(1800) // 30 minutes in seconds
+  const router = useRouter();
+      
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push("/auth")
+      }
+    }
+
+    checkAuth()
+  }, [router])
 
   // Mock quiz data
   const quiz = {
