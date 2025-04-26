@@ -9,7 +9,6 @@ import Link from "next/link"
 
 export default function FlashcardSetPage() {
   const params = useParams() as { type: string; id: string } ;
-  const { type, id } = params
   const router = useRouter()
 
   // Determine if this is a course or quick learn flashcard set
@@ -46,7 +45,7 @@ export default function FlashcardSetPage() {
 
   return (
     <AppShell>
-      <div className="space-y-8 max-w-4xl mx-auto">
+      <div className="space-y-8 max-w-4xl mx-auto mb-10">
         <div className="mb-6 mt-12">
           <Link
             href="/flashcards"
@@ -89,7 +88,8 @@ export default function FlashcardSetPage() {
 
           <div className="grid gap-4 md:grid-cols-3">
             <Button
-              className="h-auto py-6 glow-button flex flex-col items-center justify-center gap-2"
+              className={`h-auto py-6 glow-button${isCourse ? "": "-pink"} flex flex-col items-center justify-center gap-2`}
+              variant={isCourse ? "default" : "secondary"}
               onClick={() => router.push(`/flashcards/${params.type}/${params.id}/flashcards`)}
             >
               <Layers className="h-6 w-6 mb-1" />
@@ -98,7 +98,8 @@ export default function FlashcardSetPage() {
             </Button>
 
             <Button
-              className="h-auto py-6 glow-button flex flex-col items-center justify-center gap-2"
+              className={`h-auto py-6 glow-button${isCourse ? "": "-pink"} flex flex-col items-center justify-center gap-2`}
+              variant={isCourse ? "default" : "secondary"}
               onClick={() => router.push(`/flashcards/${params.type}/${params.id}/learn`)}
             >
               <BookOpen className="h-6 w-6 mb-1" />
@@ -107,7 +108,8 @@ export default function FlashcardSetPage() {
             </Button>
 
             <Button
-              className="h-auto py-6 glow-button flex flex-col items-center justify-center gap-2"
+              className={`h-auto py-6 glow-button${isCourse ? "": "-pink"} flex flex-col items-center justify-center gap-2`}
+              variant={isCourse ? "default" : "secondary"}
               onClick={() => router.push(`/flashcards/${params.type}/${params.id}/test`)}
             >
               <Zap className="h-6 w-6 mb-1" />

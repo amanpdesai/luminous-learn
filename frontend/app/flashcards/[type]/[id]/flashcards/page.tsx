@@ -1,12 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams } from "next/navigation"
 import { AppShell } from "@/components/layout/app-shell"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
-import { ArrowLeft, ArrowRight, Check, ChevronLeft, RotateCcw, Shuffle, X } from "lucide-react"
+import { ArrowLeft, ArrowRight, Check, RotateCcw, Shuffle, X } from "lucide-react"
 import Link from "next/link"
 
 interface Flashcard {
@@ -16,14 +16,12 @@ interface Flashcard {
 
 export default function FlashcardsViewPage() {
   const params = useParams() as { type: string; id: string }
-  const { type, id } = params
   const [currentCard, setCurrentCard] = useState(0)
   const [flipped, setFlipped] = useState(false)
   const [shuffled, setShuffled] = useState(false)
   const [hideAnswers, setHideAnswers] = useState(false)
   const [autoProgress, setAutoProgress] = useState(true)
   const [knownCards, setKnownCards] = useState<Set<number>>(new Set())
-  const router = useRouter()
 
   const isCourse = params.type === "course"
 
@@ -91,7 +89,10 @@ export default function FlashcardsViewPage() {
 
   const toggleKnown = () => {
     const updated = new Set(knownCards)
-    knownCards.has(currentCard) ? updated.delete(currentCard) : updated.add(currentCard)
+    if (knownCards.has(currentCard))
+      updated.delete(currentCard)
+    else
+      updated.add(currentCard)
     setKnownCards(updated)
   }
 
@@ -146,7 +147,7 @@ export default function FlashcardsViewPage() {
           <div className="space-y-2">
             <div className="h-1.5 bg-muted rounded-full overflow-hidden">
               <div
-                className="h-full bg-primary transition-all duration-300"
+                className={`h-full bg-${isCourse? "primary" : "secondary"} transition-all duration-300`}
                 style={{ width: `${((currentCard + 1) / flashcards.length) * 100}%` }}
               />
             </div>
@@ -158,7 +159,7 @@ export default function FlashcardsViewPage() {
 
           <div className="relative w-full max-w-5xl mx-auto aspect-[4/3] sm:aspect-[5/3] cursor-pointer perspective-1000" onClick={handleFlip}>
             <div className={`absolute inset-0 w-full h-full duration-500 preserve-3d ${flipped ? "rotate-y-180" : ""}`}>
-              <Card className="absolute inset-0 backface-hidden border-border/50 glow-border">
+              <Card className={`absolute inset-0 backface-hidden border-border/50 glow-border${isCourse? "" : "-pink"}`}>
                 <CardContent className="flex items-center justify-center h-full p-10 sm:p-12 lg:p-16">
                   <div className="text-center">
                     <h3 className="text-xl font-medium mb-4">{flashcards[currentCard].front}</h3>
@@ -166,7 +167,7 @@ export default function FlashcardsViewPage() {
                   </div>
                 </CardContent>
               </Card>
-              <Card className="absolute inset-0 backface-hidden rotate-y-180 border-border/50 glow-border-pink">
+              <Card className={`absolute inset-0 backface-hidden rotate-y-180 border-border/50 glow-border${isCourse? "" : "-pink"}`}>
               <CardContent className="flex items-center justify-center h-full p-10 sm:p-12 lg:p-16">
                 <div className="text-center whitespace-pre-wrap text-lg">
                     {hideAnswers ? "[Answer hidden]" : flashcards[currentCard].back}
@@ -183,7 +184,8 @@ export default function FlashcardsViewPage() {
               </Button>
 
               <Button
-                className="glow-button"
+                className={isCourse ? "glow-button" : "glow-button-pink"}
+                variant={isCourse ? "default" : "secondary"}
                 onClick={handleNext}
                 disabled={currentCard === flashcards.length - 1}
               >
@@ -224,13 +226,13 @@ export default function FlashcardsViewPage() {
 
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-6 pt-6 mt-8 border-t border-border">
             <div className="flex items-center space-x-2">
-              <Switch id="hide-answers" checked={hideAnswers} onCheckedChange={setHideAnswers} />
+              <Switch color={isCourse ? "default" : "secondary"} id="hide-answers" checked={hideAnswers} onCheckedChange={setHideAnswers} />
               <label htmlFor="hide-answers" className="text-sm cursor-pointer">
                 Hide answers
               </label>
             </div>
             <div className="flex items-center space-x-2">
-              <Switch id="auto-progress" checked={autoProgress} onCheckedChange={setAutoProgress} />
+              <Switch color={isCourse ? "default" : "secondary"} id="auto-progress" checked={autoProgress} onCheckedChange={setAutoProgress} />
               <label htmlFor="auto-progress" className="text-sm cursor-pointer">
                 Track progress automatically
               </label>
