@@ -1,9 +1,14 @@
+"use client";
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { BookOpen, Clock, Edit, Plus, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { AppShell } from "@/components/layout/app-shell"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
+import { supabase } from "@/lib/supabaseClient"
 
 export default function CoursesPage() {
   // Mock course data
@@ -63,6 +68,19 @@ export default function CoursesPage() {
       completed: 6,
     },
   ]
+
+  const router = useRouter();
+  
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push("/auth")
+      }
+    }
+
+    checkAuth()
+  }, [router])
 
   return (
     <div className="flex-1 w-full mx-auto">

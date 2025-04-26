@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { FileText, FileUp, Sparkles, Upload } from "lucide-react"
@@ -16,11 +16,24 @@ import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { AppShell } from "@/components/layout/app-shell"
+import { supabase } from "@/lib/supabaseClient"
 
 export default function CreateCoursePage() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [generationStep, setGenerationStep] = useState(0)
   const [showOutlineEditor, setShowOutlineEditor] = useState(false)
+  const router = useRouter();
+    
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push("/auth")
+      }
+    }
+
+    checkAuth()
+  }, [router])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -92,8 +105,8 @@ export default function CreateCoursePage() {
 
   return (
     <AppShell title="Create a New Course" description="Generate a personalized learning experience">
-      <div className="flex-1 overflow-auto p-4 sm:p-6 md:p-8">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="w-full px-6 md:px-12 xl:px-24 max-w-4xl mx-auto">
+        <div className="space-y-6">
           <div className="md:hidden">
             <h1 className="text-3xl font-display glow-text">Create a New Course</h1>
             <p className="text-muted-foreground">
@@ -238,7 +251,18 @@ export default function CreateCoursePage() {
 function CourseOutlineEditor() {
   const [isSaving, setIsSaving] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
-  const router = useRouter()
+  const router = useRouter();
+    
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push("/auth")
+      }
+    }
+
+    checkAuth()
+  }, [router])
 
   const handleSaveDraft = () => {
     setIsSaving(true)
@@ -251,7 +275,7 @@ function CourseOutlineEditor() {
     setIsPublishing(true)
     setTimeout(() => {
       setIsPublishing(false)
-      router.push(`/courses/${1}`) // this should be the new course ID
+      router.push("/courses")
     }, 2000)
   }
 

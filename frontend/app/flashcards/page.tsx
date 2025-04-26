@@ -1,11 +1,29 @@
+"use client";
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BookOpen, Calendar, Clock, ExternalLink, Layers, Plus, Zap } from "lucide-react"
 import Link from "next/link"
 import { AppShell } from "@/components/layout/app-shell"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
+import { supabase } from "@/lib/supabaseClient"
 
 export default function FlashcardsPage() {
+  const router = useRouter();
+      
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push("/auth")
+      }
+    }
+
+    checkAuth()
+  }, [router])
+
   // Mock flashcard sets data
   const courseSets = [
     {
