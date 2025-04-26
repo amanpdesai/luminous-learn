@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { FileText, FileUp, Sparkles, Upload } from "lucide-react"
@@ -16,24 +16,11 @@ import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { AppShell } from "@/components/layout/app-shell"
-import { supabase } from "@/lib/supabaseClient"
 
 export default function CreateCoursePage() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [generationStep, setGenerationStep] = useState(0)
   const [showOutlineEditor, setShowOutlineEditor] = useState(false)
-  const router = useRouter();
-    
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        router.push("/auth")
-      }
-    }
-
-    checkAuth()
-  }, [router])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -253,18 +240,7 @@ export default function CreateCoursePage() {
 function CourseOutlineEditor() {
   const [isSaving, setIsSaving] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
-  const router = useRouter();
-    
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        router.push("/auth")
-      }
-    }
-
-    checkAuth()
-  }, [router])
+  const router = useRouter()
 
   const handleSaveDraft = () => {
     setIsSaving(true)
@@ -277,7 +253,8 @@ function CourseOutlineEditor() {
     setIsPublishing(true)
     setTimeout(() => {
       setIsPublishing(false)
-      router.push("/courses")
+      router.push(`/courses/${1}`) // this should be the new course ID
+      // router.push("/courses")
     }, 2000)
   }
 

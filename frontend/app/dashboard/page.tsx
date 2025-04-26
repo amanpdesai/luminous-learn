@@ -1,4 +1,3 @@
-"use client";
 import type React from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -6,24 +5,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BookOpen, Clock, Edit, ExternalLink, FileText, Plus, Sparkles, Zap, Brain } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useEffect } from "react"
-import { supabase } from "@/lib/supabaseClient"
 
 export default function DashboardPage() {
-  const router = useRouter();
-      
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        router.push("/auth")
-      }
-    }
-
-    checkAuth()
-  }, [router])
-
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -67,32 +50,10 @@ export default function DashboardPage() {
       </div>
 
       <Tabs defaultValue="courses" className="space-y-4">
-      <div className="-ml-1"> {/* adjust margin here as needed */}
-      <TabsList className="inline-flex justify-center items-center px-1 py-5 bg-card border border-border rounded-full mb-6 z-10 relative shadow-sm w-fit mx-auto">
-      <TabsTrigger
-        value="courses"
-        className="px-7 py-4 text-base font-medium rounded-full transition-all
-          text-muted-foreground hover:text-foreground
-          data-[state=active]:text-white
-          data-[state=active]:bg-primary/60
-          data-[state=active]:shadow
-          data-[state=active]:glow-text"
-      >
-        My Courses
-      </TabsTrigger>
-      <TabsTrigger
-        value="quick-learn"
-        className="px-7 py-4 text-base font-medium rounded-full transition-all
-          text-muted-foreground hover:text-foreground
-          data-[state=active]:text-white
-          data-[state=active]:bg-primary/60
-          data-[state=active]:shadow
-          data-[state=active]:glow-text"
-      >
-        Quick Learn
-      </TabsTrigger>
-      </TabsList>
-      </div>
+        <TabsList>
+          <TabsTrigger value="courses">My Courses</TabsTrigger>
+          <TabsTrigger value="quick-learn">Quick Learn</TabsTrigger>
+        </TabsList>
         <TabsContent value="courses" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {[

@@ -25,93 +25,92 @@ export function AppSidebar() {
   }
 
   return (
-    <Sidebar className="overflow-x-hidden">
+    <Sidebar>
       <SidebarHeader className="pb-0">
-        <Link href="/" className="flex items-center gap-2 px-4 py-3 hover:opacity-80 transition-opacity">
+        <Link href="/" className="flex items-center gap-2 px-4 py-2 hover:opacity-80 transition-opacity">
           <Sparkles className="h-6 w-6 text-primary" />
-          <span className="text-2xl font-display">Luminous</span>
+          <span className="text-xl font-display">Luminous</span>
         </Link>
       </SidebarHeader>
-      <SidebarSeparator className="mb-4" />
-      <SidebarContent className="gap-y-4 w-full max-w-full overflow-x-hidden">
-        <SidebarMenu className="gap-y-2.5">
+      <SidebarSeparator />
+      <SidebarContent>
+        <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size={"lg"} asChild isActive={isActive("/dashboard")}>
-              <Link href="/dashboard" className="flex items-center gap-4 text-base">
-                <Home className="!h-5 !w-5 md:h-5 md:w-5" />
-                <span className="text-lg">Dashboard</span>
+            <SidebarMenuButton asChild isActive={isActive("/dashboard")}>
+              <Link href="/dashboard">
+                <Home className="h-5 w-5" />
+                <span>Dashboard</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton size={"lg"} asChild isActive={isActive("/courses")}>
-              <Link href="/courses" className="flex items-center gap-4 text-base">
-                <Layers className="!h-5 !w-5 md:h-5 md:w-5" />
-                <span className="text-lg">My Courses</span>
+            <SidebarMenuButton asChild isActive={isActive("/courses")}>
+              <Link href="/courses">
+                <Layers className="h-5 w-5" />
+                <span>My Courses</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton size={"lg"} asChild isActive={isActive("/quick-learn")}>
-              <Link href="/quick-learn" className="flex items-center gap-4 text-base">
-                <Zap className="!h-5 !w-5 md:h-5 md:w-5" />
-                <span className="text-lg">Quick Learn</span>
+            <SidebarMenuButton asChild isActive={isActive("/quick-learn")}>
+              <Link href="/quick-learn">
+                <Zap className="h-5 w-5" />
+                <span>Quick Learn</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton size={"lg"} asChild isActive={isActive("/flashcards")}>
-              <Link href="/flashcards" className="flex items-center gap-4 text-base">
-                <BookOpen className="!h-5 !w-5 md:h-5 md:w-5" />
-                <span className="text-lg">Flashcards</span>
+            <SidebarMenuButton asChild isActive={isActive("/flashcards")}>
+              <Link href="/flashcards">
+                <BookOpen className="h-5 w-5" />
+                <span>Flashcards</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton size={"lg"} asChild isActive={isActive("/quizzes")}>
-              <Link href="/quizzes" className="flex items-center gap-4 text-base">
-                <FileText className="!h-5 !w-5 md:h-5 md:w-5" />
-                <span className="text-lg">Quizzes</span>
+            <SidebarMenuButton asChild isActive={isActive("/quizzes")}>
+              <Link href="/quizzes">
+                <FileText className="h-5 w-5" />
+                <span>Quizzes</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
         <SidebarSeparator />
-        <SidebarMenu className="gap-y-2.5">
+        <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size={"lg"} asChild isActive={isActive("/tutor")}>
-              <Link href="/tutor" className="flex items-center gap-4 text-base">
-                <Brain className="!h-5 !w-5 md:h-5 md:w-5" />
-                <span className="text-lg">AI Tutor</span>
+            <SidebarMenuButton asChild isActive={isActive("/tutor")}>
+              <Link href="/tutor">
+                <Brain className="h-5 w-5" />
+                <span>AI Tutor</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton size={"lg"} asChild isActive={isActive("/suggestions")}>
-              <Link href="/suggestions" className="flex items-center gap-4 text-base">
-                <Lightbulb className="!h-5 !w-5 md:h-5 md:w-5" />
-                <span className="text-lg">Suggestions</span>
+            <SidebarMenuButton asChild isActive={isActive("/suggestions")}>
+              <Link href="/suggestions">
+                <Lightbulb className="h-5 w-5" />
+                <span>Suggestions</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarContent>
-      <SidebarFooter className="mb-6">
-        <SidebarSeparator className="mb-2"/>
-        <SidebarMenu className="gap-y-2.5">
+      <SidebarFooter>
+        <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size={"lg"} asChild isActive={isActive("/profile")}>
-              <Link href="/profile" className="flex items-center gap-4 text-base">
-                <User className="!h-5 !w-5 md:h-5 md:w-5" />
-                <span className="text-lg">Profile</span>
+            <SidebarMenuButton asChild isActive={isActive("/profile")}>
+              <Link href="/profile">
+                <User className="h-5 w-5" />
+                <span>Profile</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton size={"lg"} asChild isActive={isActive("/settings")}>
-              <Link href="/settings" className="flex items-center gap-4 text-base">
-                <Settings className="!h-5 !w-5 md:h-5 md:w-5" />
-                <span className="text-lg">Settings</span>
+            <SidebarMenuButton asChild isActive={isActive("/settings")}>
+              <Link href="/settings">
+                <Settings className="h-5 w-5" />
+                <span>Settings</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
