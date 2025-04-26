@@ -17,6 +17,10 @@ import { supabase } from "@/lib/supabaseClient"
 export default function CreateQuickLearnPage() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [generationStep, setGenerationStep] = useState(0)
+  const [topic, setTopic] = useState('')
+  const [difficulty, setDifficulty] = useState('beginner')
+  const [notes, setNotes] = useState('')
+  const [error, setError] = useState('')
   const router = useRouter()
 
   useEffect(() => {
@@ -37,18 +41,81 @@ export default function CreateQuickLearnPage() {
     "Finalizing Quick Learn Session",
   ]
 
-  const simulateLLMCall = async () => {
-    for (let i = 0; i < steps.length; i++) {
-      setGenerationStep(i)
-      await new Promise((res) => setTimeout(res, 1500))
+  const generateQuickLearn = async () => {
+    try {
+      setError('')
+      // Get the auth token
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push('/auth')
+        return
+      }
+      
+      const token = session.access_token
+      
+      // Update UI to show first step
+      setGenerationStep(0)
+      
+      // Call the API to generate quick learn content
+      const response = await fetch('http://localhost:8080/api/generate_quick_learn', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          topic: topic,
+          difficulty: difficulty,
+          // Include notes if needed by backend (could expand API to handle this)
+          notes: notes
+        })
+      })
+      
+      // Update UI to show progress
+      setGenerationStep(1)
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create quick learn content')
+      }
+      
+      // Get the response data
+      setGenerationStep(2)
+      const data = await response.json()
+      
+      // The data is already saved to the database by the API
+      // Extract the ID from the response to navigate to the correct page
+      const quickLearnId = data[0]?.id
+      
+      setGenerationStep(3)
+      
+      // Navigate to the quick learn content page with the ID
+      setTimeout(() => {
+        if (quickLearnId) {
+          router.push(`/quick-learn/${quickLearnId}`)
+        } else {
+          router.push('/quick-learn')
+        }
+      }, 1000)
+      
+    } catch (error) {
+      console.error('Error generating quick learn:', error)
+      setError(error instanceof Error ? error.message : 'Failed to generate quick learn')
+      setIsGenerating(false)
     }
-    router.push("/quick-learn/1")
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validate inputs
+    if (!topic.trim()) {
+      setError('Please enter a topic to learn about')
+      return
+    }
+    
     setIsGenerating(true)
-    simulateLLMCall()
+    generateQuickLearn()
   }
 
   if (isGenerating) {
@@ -56,10 +123,21 @@ export default function CreateQuickLearnPage() {
       <AppShell>
         <div className="w-full px-6 md:px-12 xl:px-24 max-w-4xl mx-auto">
           <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-8">
-            <div className="h-16 w-16 rounded-full bg-secondary/10 flex items-center justify-center animate-pulse">
-              <Zap className="h-8 w-8 text-secondary" />
-            </div>
-            <h1 className="text-3xl font-display glow-text-pink">Creating Your Quick Learn Session</h1>
+            {error ? (
+              <div className="bg-destructive/10 text-destructive p-4 rounded-md max-w-md">
+                <p>{error}</p>
+                <Button onClick={() => setIsGenerating(false)} className="mt-4">
+                  Try Again
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div className="h-16 w-16 rounded-full bg-secondary/10 flex items-center justify-center animate-pulse">
+                  <Zap className="h-8 w-8 text-secondary" />
+                </div>
+                <h1 className="text-3xl font-display glow-text-pink">Creating Your Quick Learn Session</h1>
+              </>
+            )}
             <div className="w-full max-w-md space-y-6">
               {steps.map((step, index) => (
                 <div key={index} className="flex items-center gap-3">
@@ -109,13 +187,19 @@ export default function CreateQuickLearnPage() {
                   id="topic"
                   placeholder="E.g., JavaScript Promises, CSS Grid, React Hooks..."
                   className="h-24 input-glow resize-none"
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  required
                 />
               </div>
 
               <div className="space-y-2">
                 <Label className="text-base">Difficulty Level</Label>
-                <RadioGroup defaultValue="beginner" className="grid grid-cols-3 gap-2">
-                  {["beginner", "intermediate", "advanced"].map((level) => (
+                <RadioGroup 
+                  value={difficulty} 
+                  onValueChange={setDifficulty} 
+                  className="grid grid-cols-3 gap-2">
+                  {["Beginner", "Intermediate", "Advanced"].map((level) => (
                     <Label
                       key={level}
                       htmlFor={level}
@@ -136,6 +220,8 @@ export default function CreateQuickLearnPage() {
                   id="notes"
                   placeholder="Add any specific points you'd like the session to focus on..."
                   className="h-24 input-glow resize-none"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
                 />
               </div>
 

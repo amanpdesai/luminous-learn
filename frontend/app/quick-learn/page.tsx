@@ -33,13 +33,16 @@ import {
 import { supabase } from "@/lib/supabaseClient"
 
 type QuickLearnSession = {
-  id: number
+  id: string
   title: string
-  description: string
-  duration: string
-  progress: number
-  totalLessons: number
-  lastAccessed: string // ISO string
+  description?: string
+  topic: string
+  difficulty: string
+  createdAt: string
+  lastAccessed?: string
+  estimated_duration_minutes?: number
+  sections: Array<{ id: string; title: string }>  // sections are required now
+  completed: number                               // added completed field
 }
 
 type SortOption =
@@ -56,44 +59,78 @@ export default function QuickLearnPage() {
   const [sortOption, setSortOption] = useState<SortOption>("lastAccessed_desc")
   const router = useRouter()
 
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) router.push("/auth")
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          router.push("/auth")
+          return false
+        }
+        return session
+      } catch (err) {
+        console.error('Authentication error:', err)
+        router.push("/auth")
+        return false
+      }
     }
 
     const fetchSessions = async () => {
-      setSessions([
-        {
-          id: 1,
-          title: "TypeScript Types",
-          description: "TypeScript types and interfaces overview",
-          duration: "12 min",
-          progress: 60,
-          totalLessons: 3,
-          lastAccessed: "2025-04-23T10:00:00.000Z",
-        },
-        {
-          id: 2,
-          title: "JavaScript Promises",
-          description: "Understanding asynchronous programming",
-          duration: "15 min",
-          progress: 80,
-          totalLessons: 5,
-          lastAccessed: "2025-04-22T09:30:00.000Z",
-        },
-        {
-          id: 3,
-          title: "CSS Grid Layout",
-          description: "Modern web layouts with CSS Grid",
-          duration: "10 min",
-          progress: 100,
-          totalLessons: 4,
-          lastAccessed: "2025-04-18T08:00:00.000Z",
-        },
-      ])
-    }
-
+      setLoading(true)
+      setError(null)
+    
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          router.push("/auth")
+          return
+        }
+    
+        const token = session.access_token
+    
+        const response = await fetch('http://localhost:8080/api/quick_learns', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+    
+        if (!response.ok) {
+          throw new Error(`Error fetching quick learn sessions: ${response.statusText}`)
+        }
+    
+        const data = await response.json()
+    
+        if (Array.isArray(data)) {
+          setSessions(
+            data.map((item) => ({
+              id: item.id,
+              title: item.title,
+              description: item.description || "",
+              topic: item.topic,
+              difficulty: item.difficulty,
+              createdAt: item.created_at || new Date().toISOString(),
+              lastAccessed: item.last_accessed || item.created_at || new Date().toISOString(),
+              estimated_duration_minutes: item.estimated_duration_minutes || 0,
+              sections: item.sections || [],
+              completed: item.completed || 0,
+            }))
+          )
+        } else {
+          console.error('Unexpected data format:', data)
+          setSessions([])
+        }
+      } catch (err) {
+        console.error('Error fetching quick learn sessions:', err)
+        setError('Failed to load quick learn sessions')
+        setSessions([])
+      } finally {
+        setLoading(false)
+      }
+    }    
     checkAuth()
     fetchSessions()
   }, [router])
@@ -101,25 +138,33 @@ export default function QuickLearnPage() {
   const filteredAndSortedSessions = useMemo(() => {
     const filtered = sessions.filter(session =>
       session.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      session.description.toLowerCase().includes(searchTerm.toLowerCase())
+      (session.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      session.topic.toLowerCase().includes(searchTerm.toLowerCase())
     )
   
     const [key, direction] = sortOption.split("_")
   
     filtered.sort((a, b) => {
-      if (key === "lastAccessed") {
-        const dateA = new Date(a.lastAccessed).getTime()
-        const dateB = new Date(b.lastAccessed).getTime()
+      if (key === "lastAccessed" || key === "createdAt") {
+        const dateA = new Date(a.createdAt).getTime()
+        const dateB = new Date(b.createdAt).getTime()
         return direction === "asc" ? dateA - dateB : dateB - dateA
+      } else if (key === "lessons") {
+        const valA = a.sections?.length || 0
+        const valB = b.sections?.length || 0
+        return direction === "asc" ? valA - valB : valB - valA  
       } else {
-        const valA = a[key as keyof QuickLearnSession] as number
-        const valB = b[key as keyof QuickLearnSession] as number
-        return direction === "asc" ? valA - valB : valB - valA
+        // Default sort by creation date if other fields don't exist
+        const dateA = new Date(a.createdAt).getTime()
+        const dateB = new Date(b.createdAt).getTime()
+        return direction === "asc" ? dateA - dateB : dateB - dateA
       }
     })
   
     return filtered
   }, [sessions, searchTerm, sortOption])  
+
+  console.log(filteredAndSortedSessions)
 
   return (
     <div className="flex-1 w-full mx-auto">
@@ -150,7 +195,7 @@ export default function QuickLearnPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  {[["progress", "Progress"], ["lessons", "Lessons"], ["lastAccessed", "Last Accessed"]].map(
+                  {[["lessons", "Sections"], ["createdAt", "Created"]].map(
                     ([key, label]) => (
                       <div key={key}>
                         <DropdownMenuItem onClick={() => setSortOption(`${key}_asc` as SortOption)}>
@@ -175,71 +220,103 @@ export default function QuickLearnPage() {
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredAndSortedSessions.map((session) => (
-              <Card key={session.id} className="border-border/50 card-hover group">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2 text-xs text-secondary mb-1.5">
-                    <Zap className="h-3.5 w-3.5" />
-                    <span>Quick Learn</span>
-                  </div>
-                  <CardTitle className="text-lg group-hover:text-secondary transition-colors truncate">
-                    {session.title}
-                  </CardTitle>
-                  <CardDescription className="mt-1.5 line-clamp-2">{session.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="pb-3">
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">{session.duration}</span>
+            {/* Create Quick Learn Card - Always visible */}
+            {loading ? (
+              // Loading placeholders
+              Array.from({ length: 2 }).map((_, i) => (
+                <Card key={i} className="border-border/50 card-hover group animate-pulse">
+                  <CardHeader className="pb-3">
+                    <div className="h-4 w-24 bg-muted rounded mb-1.5"></div>
+                    <div className="h-6 w-5/6 bg-muted rounded mb-2"></div>
+                    <div className="h-4 w-full bg-muted rounded"></div>
+                  </CardHeader>
+                  <CardContent className="pb-3">
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="h-4 w-16 bg-muted rounded"></div>
+                        <div className="h-4 w-24 bg-muted rounded ml-auto"></div>
                       </div>
-                      <div className="flex items-center gap-1.5 justify-end">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">
-                          {formatDistanceToNowStrict(parseISO(session.lastAccessed), { addSuffix: true })}
-                        </span>
-                      </div>
+                      <div className="h-4 w-32 bg-muted rounded"></div>
                     </div>
-
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs">
-                        <span>Progress</span>
-                        <span className="text-secondary font-medium">{session.progress}%</span>
-                      </div>
-                      <Progress value={session.progress} className="h-2 bg-secondary/10 [&>div]:bg-secondary" />
-                    </div>
-
-                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <BookOpen className="h-4 w-4" />
-                      <span>{session.totalLessons} lessons</span>
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="pt-3">
-                  <Button className="glow-button-pink bg-secondary hover:bg-secondary/90 w-full" asChild>
-                    <Link href={`/quick-learn/${session.id}`}>Continue</Link>
+                  </CardContent>
+                  <CardFooter className="pt-3">
+                    <div className="h-10 w-full bg-muted rounded"></div>
+                  </CardFooter>
+                </Card>
+              ))
+            ) : error ? (
+              // Error state
+              <Card className="border-border/50 border-dashed bg-muted/50 col-span-2">
+                <CardContent className="flex flex-col items-center justify-center h-full py-10">
+                  <p className="text-sm text-muted-foreground text-center mb-5">
+                    {error}
+                  </p>
+                  <Button onClick={() => window.location.reload()} variant="outline">
+                    Try Again
                   </Button>
-                </CardFooter>
+                </CardContent>
               </Card>
-            ))}
+            ) : filteredAndSortedSessions.map((session) => (
+                <Card key={session.id} className="border-border/50 card-hover group">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-2 text-xs text-secondary mb-1.5">
+                      <Zap className="h-3.5 w-3.5" />
+                      <span>{session.difficulty} Level</span>
+                    </div>
+                    <CardTitle className="text-lg group-hover:text-secondary transition-colors truncate">
+                      {session.title}
+                    </CardTitle>
+                    <CardDescription className="mt-1.5 line-clamp-2">
+                      {session.description || session.topic}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pb-3">
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">
+                            {session.estimated_duration_minutes ? `${session.estimated_duration_minutes} min` : 'Quick session'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 justify-end">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">
+                            {formatDistanceToNowStrict(parseISO(session.createdAt), { addSuffix: true })}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <BookOpen className="h-4 w-4" />
+                        <span>{session.sections?.length || 0} sections</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="pt-3">
+                    <Button className="glow-button-pink bg-secondary hover:bg-secondary/90 w-full" asChild>
+                      <Link href={`/quick-learn/${session.id}`}>Continue</Link>
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
             <Card className="border-border/50 border-dashed bg-muted/50 card-hover">
-            <CardContent className="flex flex-col items-center justify-center h-full py-10">
-              <div className="h-14 w-14 rounded-full bg-secondary/10 flex items-center justify-center mb-4">
-                <Zap className="h-7 w-7 text-secondary" />
-              </div>
-              <h3 className="text-lg font-medium mb-2">Quick Learn</h3>
-              <p className="text-sm text-muted-foreground text-center mb-5 max-w-xs">
-                Create a focused single-topic lesson in minutes
-              </p>
-              <Button className="glow-button-pink bg-secondary hover:bg-secondary/90" asChild>
-                <Link href="/quick-learn/create">
-                  <Zap className="mr-2 h-4 w-4" />
-                  Start Quick Learn
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
+              <CardContent className="flex flex-col items-center justify-center h-full py-10">
+                <div className="h-14 w-14 rounded-full bg-secondary/10 flex items-center justify-center mb-4">
+                  <Zap className="h-7 w-7 text-secondary" />
+                </div>
+                <h3 className="text-lg font-medium mb-2">Quick Learn</h3>
+                <p className="text-sm text-muted-foreground text-center mb-5 max-w-xs">
+                  Create a focused single-topic lesson in minutes
+                </p>
+                <Button className="glow-button-pink bg-secondary hover:bg-secondary/90" asChild>
+                  <Link href="/quick-learn/create">
+                    <Zap className="mr-2 h-4 w-4" />
+                    Start Quick Learn
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </AppShell>

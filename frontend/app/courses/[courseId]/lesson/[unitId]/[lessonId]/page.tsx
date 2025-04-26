@@ -354,7 +354,7 @@ export default function ModulePage() {
     },
   })
 
-  const cleanedLessonContent = turndownService.turndown(lesson.content)
+  const cleanedLessonContent = lesson.content || ""
 
   const handleAnswerSelection = (questionIndex: number, answerIndex: number) => {
     setQuizAnswers((prev) => ({
