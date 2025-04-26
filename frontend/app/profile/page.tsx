@@ -1,3 +1,5 @@
+"use client";
+
 import type React from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -7,8 +9,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BookOpen, Calendar, Clock, Edit, FileText, Layers, Medal, Sparkles, Zap } from "lucide-react"
 import Link from "next/link"
 import { AppShell } from "@/components/layout/app-shell"
+import { useRouter } from "next/navigation"
+import { supabase } from "@/lib/supabaseClient"
+import { useEffect } from "react"
 
 export default function ProfilePage() {
+  const router = useRouter();
+    
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push("/auth")
+      }
+    }
+
+    checkAuth()
+  }, [router])
+
   return (
     <div className="flex-1 w-full mx-auto">
       <AppShell>

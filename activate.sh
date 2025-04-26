@@ -17,7 +17,6 @@ pip install -r backend/requirements.txt
 # Navigate to frontend and install npm packages
 echo "Installing frontend npm packages..."
 cd frontend
-nvm use 22
 npm install
 
 # Return to original directory

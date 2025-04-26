@@ -1,3 +1,5 @@
+"use client";
+
 import type React from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,8 +12,23 @@ import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Bell, CreditCard, Globe, Lock, Mail, Moon, Sun } from "lucide-react"
 import { AppShell } from "@/components/layout/app-shell"
+import { useRouter } from "next/navigation"
+import { supabase } from "@/lib/supabaseClient";
+import { useEffect } from "react";
 
 export default function SettingsPage() {
+  const router = useRouter();
+      
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push("/auth")
+      }
+    }
+
+    checkAuth()
+  }, [router])
   return (
     <div className="flex-1 w-full mx-auto">
       <AppShell>

@@ -1,21 +1,47 @@
-"use client"
-
+"use client";
 import type React from "react"
-
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BookOpen, ChevronLeft, ChevronRight, FileText, Lightbulb, MoreHorizontal, Play, Plus } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useParams, useRouter } from "next/navigation"
+import { supabase } from "@/lib/supabaseClient"
 
-export default function CoursePage({ params }: { params: { id: string } }) {
+type Lesson = {
+  title: string;
+  completed: boolean;
+  content?: string; // Mark it optional
+};
+
+type Unit = {
+  title: string;
+  lessons: Lesson[];
+};
+
+type Course = {
+  id: string;
+  title: string;
+  description: string;
+  progress: number;
+  totalLessons: number;
+  completedLessons: number;
+  estimatedTime: string;
+  lastAccessed: string;
+  units: Unit[];
+};
+
+export default function CoursePage() {
   const [activeLesson, setActiveLesson] = useState(0)
 
+  const params = useParams();
+  const id: string = Array.isArray(params.id) ? params.id[0] : params.id!;
+
   // Mock course data
-  const course = {
-    id: params.id,
+  const course: Course = {
+    id: id,
     title: "Introduction to Python Programming",
     description:
       "A comprehensive introduction to Python programming language, covering basic syntax, data structures, control flow, and practical applications.",
@@ -321,6 +347,19 @@ print(type(is_active))  # <class 'bool'></code></pre>
   //const currentUnitIndex = course.units.findIndex((unit) =>
   //  unit.lessons.some((lesson) => lesson.title === currentLesson.title),
   //)
+
+  const router = useRouter();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push("/auth")
+      }
+    }
+
+    checkAuth()
+  }, [router])
 
   return (
     <div className="flex h-screen overflow-hidden">

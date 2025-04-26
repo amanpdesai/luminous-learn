@@ -8,10 +8,24 @@ import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BookOpen, ChevronLeft, ChevronRight, FileText, Lightbulb, MoreHorizontal, Play, Plus } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import { supabase } from "@/lib/supabaseClient"
 
 export default function QuickLearnSessionPage({ params }: { params: { id: string } }) {
-  const [activeSection, setActiveSection] = useState(0)
+  const [activeSection, setActiveSection] = useState(0);
+  const router = useRouter();
+      
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push("/auth")
+      }
+    }
+
+    checkAuth()
+  }, [router])
 
   // Mock quick learn session data
   const session = {

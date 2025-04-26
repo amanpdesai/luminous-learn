@@ -25,8 +25,11 @@ import {
 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
+import { useRouter } from "next/navigation"
+import { supabase } from "@/lib/supabaseClient"
 
 export default function TutorPage() {
+  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
@@ -65,7 +68,17 @@ export default function TutorPage() {
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    const checkAuthAndScroll = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+  
+      if (!session) {
+        router.push("/auth")
+      } else {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+      }
+    }
+  
+    checkAuthAndScroll()
   }, [messages])
 
   const handleSelectCourse = (course: Course) => {

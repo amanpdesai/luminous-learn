@@ -1,5 +1,7 @@
 "use client"
 
+import { useRouter } from "next/navigation"
+import { supabase } from "@/lib/supabaseClient"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -14,6 +16,13 @@ import {
 import { CreditCard, LogOut, Settings, User } from "lucide-react"
 
 export function UserNav() {
+  const router = useRouter()
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    router.push("/")
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -47,7 +56,7 @@ export function UserNav() {
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={handleLogout}>
           <LogOut className="mr-2 h-4 w-4" />
           <span>Log out</span>
         </DropdownMenuItem>

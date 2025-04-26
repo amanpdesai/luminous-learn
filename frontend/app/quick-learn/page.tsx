@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useEffect } from "react"
 import Link from "next/link"
 import {
   FileText,
@@ -20,8 +20,22 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { AppShell } from "@/components/layout/app-shell"
+import { useRouter } from "next/navigation"
+import { supabase } from "@/lib/supabaseClient"
 
 export default function QuickLearnPage() {
+  const router = useRouter();
+      
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push("/auth")
+      }
+    }
+
+    checkAuth()
+  }, [router])
   const quickLearnSessions = [
     {
       id: 1,

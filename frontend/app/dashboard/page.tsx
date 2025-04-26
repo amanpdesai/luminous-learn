@@ -1,3 +1,4 @@
+"use client";
 import type React from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -5,8 +6,24 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BookOpen, Clock, Edit, ExternalLink, FileText, Plus, Sparkles, Zap, Brain } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
+import { supabase } from "@/lib/supabaseClient"
 
 export default function DashboardPage() {
+  const router = useRouter();
+      
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push("/auth")
+      }
+    }
+
+    checkAuth()
+  }, [router])
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
