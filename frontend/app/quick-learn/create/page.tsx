@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Check, Zap, ArrowLeft } from "lucide-react"
+import { Check, Zap, ArrowLeft, Sparkles } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 
@@ -15,10 +15,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { supabase } from "@/lib/supabaseClient"
 
 export default function CreateQuickLearnPage() {
+  const [pageLoading, setPageLoading] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
   const [generationStep, setGenerationStep] = useState(0)
   const [topic, setTopic] = useState('')
-  const [difficulty, setDifficulty] = useState('beginner')
+  const [difficulty, setDifficulty] = useState('Beginner')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
   const router = useRouter()
@@ -32,13 +33,14 @@ export default function CreateQuickLearnPage() {
     }
 
     checkAuth()
+    setPageLoading(false)
   }, [router])
 
   const steps = [
-    "Analyzing Topic",
-    "Generating Content Structure",
-    "Creating Learning Materials",
-    "Finalizing Quick Learn Session",
+    "Analyzing Topic Complexity",
+    "Designing Unit Structure",
+    "Generating Lessons and Descriptions",
+    "Creating Learning Objectives",
   ]
 
   const generateQuickLearn = async () => {
@@ -52,9 +54,6 @@ export default function CreateQuickLearnPage() {
       }
       
       const token = session.access_token
-      
-      // Update UI to show first step
-      setGenerationStep(0)
       
       // Call the API to generate quick learn content
       const response = await fetch('http://localhost:8080/api/generate_quick_learn', {
@@ -71,8 +70,10 @@ export default function CreateQuickLearnPage() {
         })
       })
       
-      // Update UI to show progress
-      setGenerationStep(1)
+      for (let i = 0; i < steps.length; i++) {
+        setGenerationStep(i)
+        await new Promise((resolve) => setTimeout(resolve, 1200))
+      }
       
       if (!response.ok) {
         const errorData = await response.json()
@@ -116,6 +117,10 @@ export default function CreateQuickLearnPage() {
     
     setIsGenerating(true)
     generateQuickLearn()
+  }
+
+  if (pageLoading){
+    return (<AppShell><DashboardLoading></DashboardLoading></AppShell>)
   }
 
   if (isGenerating) {
@@ -236,5 +241,21 @@ export default function CreateQuickLearnPage() {
         </Card>
       </div>
     </AppShell>
+  )
+}
+
+function DashboardLoading() {
+  return (
+    <div className="flex flex-col justify-center items-center min-h-[80vh] animate-fade-in">
+      <div className="flex items-center justify-center w-20 h-20 rounded-full bg-secondary/10">
+        <Sparkles className="h-10 w-10 text-secondary animate-spin-slow" />
+      </div>
+      <h2 className="mt-6 text-2xl font-display font-semibold text-center text-secondary">
+        Loading your Create page...
+      </h2>
+      <p className="mt-2 text-muted-foreground text-sm">
+        Preparing your learning journey ✨
+      </p>
+    </div>
   )
 }

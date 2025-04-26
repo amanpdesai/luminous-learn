@@ -13,6 +13,7 @@ import {
   FolderOpen,
   Lightbulb,
   Play,
+  Sparkles,
   Video,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -79,6 +80,7 @@ type Course = {
 
 
 export default function CoursePage() {
+  const [pageLoading, setPageLoading] = useState(true)
   const params = useParams()
   // State to track which units are expanded
   const [expandedUnits, setExpandedUnits] = useState<Record<number, boolean>>({
@@ -89,6 +91,10 @@ export default function CoursePage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) router.push("/auth")
+    }
     const fetchCourse = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
@@ -134,8 +140,10 @@ export default function CoursePage() {
         setLoading(false)
       }
     }
-  
-    fetchCourse()
+    checkAuth()
+    Promise.all([
+      fetchCourse()
+    ]).finally(() => setPageLoading(false));
   }, [params.courseId])
   
 
@@ -213,8 +221,8 @@ export default function CoursePage() {
     }
   }
 
-  if (loading || !course){
-    return (<>Loading...</>)
+  if (pageLoading || !course){
+    return (<AppShell><DashboardLoading></DashboardLoading></AppShell>)
   }
 
   return (
@@ -451,5 +459,21 @@ export default function CoursePage() {
         </div>
       </div>
     </AppShell>
+  )
+}
+
+function DashboardLoading() {
+  return (
+    <div className="flex flex-col justify-center items-center min-h-[80vh] animate-fade-in">
+      <div className="flex items-center justify-center w-20 h-20 rounded-full bg-primary/10">
+        <Sparkles className="h-10 w-10 text-primary animate-spin-slow" />
+      </div>
+      <h2 className="mt-6 text-2xl font-display font-semibold text-center text-primary">
+        Loading your Course...
+      </h2>
+      <p className="mt-2 text-muted-foreground text-sm">
+        Preparing your learning journey ✨
+      </p>
+    </div>
   )
 }

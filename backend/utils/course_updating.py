@@ -83,3 +83,26 @@ def update_course_draft(course_id: str, data: dict, token) -> Union[Dict[str, An
     except Exception as e:
         print(f"[ERROR] Supabase update failed: {e}")
         return {"error": str(e)}, 500
+
+
+def delete_course(course_id: str, token) -> Union[Dict[str, Any], Tuple[Dict[str, Any], int]]:
+    """Delete a course from the database"""
+    user_id = verify_token_and_get_user_id(token)
+    if not user_id:
+        return {"error": "Invalid token or user not authenticated"}, 401
+    
+    # First verify that the course belongs to this user
+    try:
+        course = supabase.table("courses").select("*").eq("id", course_id).eq("user_id", user_id).execute()
+        if not course.data or len(course.data) == 0:
+            return {"error": "Course not found or you don't have permission to delete it"}, 404
+    except Exception as e:
+        print(f"[ERROR] Supabase fetch failed: {e}")
+        return {"error": str(e)}, 500
+    
+    try:
+        result = supabase.table("courses").delete().eq("id", course_id).execute()
+        return {"message": "Course successfully deleted", "id": course_id}
+    except Exception as e:
+        print(f"[ERROR] Supabase delete failed: {e}")
+        return {"error": str(e)}, 500
