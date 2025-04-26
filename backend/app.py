@@ -1,7 +1,11 @@
 # app.py
 from flask import Flask, request, jsonify
+from routes.course_gen import course_bp
+from flask_cors import CORS
 
 app = Flask(__name__)
+app.register_blueprint(course_bp)
+CORS(app, origins=["http://localhost:3000", "https://luminous-learn.vercel.app"])
 
 @app.route("/")
 def home():
