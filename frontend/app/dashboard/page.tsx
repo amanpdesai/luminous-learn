@@ -5,13 +5,22 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { BookOpen, Clock, Edit, ExternalLink, FileText, Plus, Sparkles, Zap, Brain } from "lucide-react"
+import { BookOpen, Clock, Edit, ExternalLink, FileText, Plus, Sparkles, Zap, Brain, Layers, PcCase } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabaseClient"
 
 export default function DashboardPage() {
   const router = useRouter();
+  const [userData, setUserData] = useState<{
+      email: string | null
+      name: string | null
+      avatarUrl: string | null
+    }>({
+      email: null,
+      name: null,
+      avatarUrl: null,
+    })
       
   useEffect(() => {
     const checkAuth = async () => {
@@ -21,27 +30,45 @@ export default function DashboardPage() {
       }
     }
 
+    const fetchUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (user) {
+        setUserData({
+          email: user.email || null,
+          name:
+            user.user_metadata?.name ||
+            user.user_metadata?.full_name ||
+            user.user_metadata?.username ||
+            "User",
+          avatarUrl: user.user_metadata?.avatar_url || null,
+        })
+      }
+    }
+
     checkAuth()
+    fetchUser()
   }, [router])
 
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display">Welcome back, John</h1>
+          <h1 className="text-3xl font-display">Welcome back, {userData.name}</h1>
           <p className="text-muted-foreground">Continue your learning journey</p>
         </div>
         <div className="flex gap-3">
+          <Button className="glow-button" asChild>
+            <Link href="/courses">
+              <Layers className="mr-2 h-4 w-4" />
+              My Courses
+            </Link>
+          </Button>
           <Button className="glow-button-pink bg-secondary hover:bg-secondary/90" asChild>
             <Link href="/quick-learn">
               <Zap className="mr-2 h-4 w-4" />
               Quick Learn
-            </Link>
-          </Button>
-          <Button className="glow-button" asChild>
-            <Link href="/create-course">
-              <Plus className="mr-2 h-4 w-4" />
-              New Course
             </Link>
           </Button>
         </div>
@@ -49,10 +76,10 @@ export default function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {[
-          { title: "Courses Created", value: "12", icon: <FileText className="h-4 w-4 text-primary" /> },
+          { title: "Courses Created", value: "12", icon: <PcCase className="h-4 w-4 text-primary" /> },
           { title: "Lessons Completed", value: "87", icon: <BookOpen className="h-4 w-4 text-primary" /> },
-          { title: "Hours Learned", value: "32", icon: <Clock className="h-4 w-4 text-primary" /> },
           { title: "Quick Learn Sessions", value: "24", icon: <Zap className="h-4 w-4 text-primary" /> },
+          { title: "Hours Learned", value: "32", icon: <Clock className="h-4 w-4 text-primary" /> },
         ].map((stat, index) => (
           <Card key={index} className="border-border/50">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
