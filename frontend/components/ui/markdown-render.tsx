@@ -32,6 +32,18 @@ const mathStyles = `
   }
 `
 
+const containsPre = (node: any): boolean => {
+  if (!node) return false
+
+  const n = node as any
+
+  if (n.tagName === "pre") return true
+  if (Array.isArray(n.children)) {
+    return n.children.some((child: any) => containsPre(child))
+  }
+  return false
+}
+
 interface CodeProps {
   inline?: boolean
   className?: string
@@ -103,14 +115,14 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
         components={{
           code: CodeBlock,
           p: ({ node, children, ...props }) => {
-            const hasPre = node?.children?.some((child: any) => child.tagName === "pre")
-            if (hasPre) return <>{children}</>
+            if (containsPre(node)) return <>{children}</>
+          
             return (
               <p className="mb-4 whitespace-pre-wrap" {...props}>
                 {children}
               </p>
             )
-          },
+          },          
           h1: ({ children }) => <h1 className="text-2xl font-bold mt-6 mb-3">{children}</h1>,
           h2: ({ children }) => <h2 className="text-xl font-bold mt-5 mb-2">{children}</h2>,
           h3: ({ children }) => <h3 className="text-lg font-semibold mt-4 mb-2">{children}</h3>,

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { AppShell } from "@/components/layout/app-shell"
@@ -8,41 +8,114 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, BookOpen, Zap } from "lucide-react"
+import { ArrowLeft, BookOpen, Sparkles, Zap } from "lucide-react"
+import { supabase } from "@/lib/supabaseClient"
 
 export default function CreateFlashcardsPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const [selectedContext, setSelectedContext] = useState<number | null>(null)
+  const [selectedContext, setSelectedContext] = useState<string | null>(null)
   const [cardCount, setCardCount] = useState(15)
-  const [difficulty, setDifficulty] = useState("intermediate")
+  const [contentScope, setContentScope] = useState("All Lessons")
   const [learningGoal, setLearningGoal] = useState("deep-understanding")
   const [isGenerating, setIsGenerating] = useState(false)
   const [tab, setTab] = useState(searchParams.get("tab") || "courses")
+  const [courses, setCourses] = useState<any[]>([])
+  const [quickLearns, setQuickLearns] = useState<any[]>([])
+  const [loadingCourses, setLoadingCourses] = useState(true)
+  const [loadingQuickLearns, setLoadingQuickLearns] = useState(true)
 
-  const courses = [
-    { id: 1, title: "Introduction to Python Programming", progress: 75, lastAccessed: "2 days ago" },
-    { id: 2, title: "Web Development Fundamentals", progress: 42, lastAccessed: "Yesterday" },
-    { id: 3, title: "Data Science Essentials", progress: 28, lastAccessed: "1 week ago" },
-    { id: 4, title: "Machine Learning Basics", progress: 15, lastAccessed: "3 days ago" },
-  ]
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          router.push("/auth")
+          return
+        }
+        const token = session.access_token
+  
+        setLoadingCourses(true)
+        const resCourses = await fetch("http://localhost:8080/api/get_user_courses", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const coursesData = await resCourses.json()
+        setCourses(coursesData || [])
+  
+        setLoadingQuickLearns(true)
+        const resQuickLearns = await fetch("http://localhost:8080/api/quick_learns", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const quickLearnsData = await resQuickLearns.json()
+        setQuickLearns(quickLearnsData || [])
+        
+      } catch (error) {
+        console.error("Error fetching:", error)
+      } finally{
+        setLoadingCourses(false)
+        setLoadingQuickLearns(false)
+      }
+    }
+  
+    fetchData()
+  }, [router])
 
-  const quickLearnSessions = [
-    { id: 1, title: "JavaScript Promises", progress: 60, lastAccessed: "3 days ago" },
-    { id: 2, title: "CSS Grid Layout", progress: 45, lastAccessed: "5 days ago" },
-    { id: 3, title: "React Hooks", progress: 70, lastAccessed: "Yesterday" },
-    { id: 4, title: "Python List Comprehensions", progress: 80, lastAccessed: "4 days ago" },
-  ]
-
-  const handleGenerateFlashcards = () => {
+  const handleGenerateFlashcards = async () => {
+    if (!selectedContext) return
     setIsGenerating(true)
-    setTimeout(() => {
-      const type = tab === "courses" ? "course" : "quick-learn"
-      router.push(`/flashcards/${type}/${selectedContext}/edit`)
-    }, 1500)
-  }
+  
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push("/auth")
+        return
+      }
+      const token = session.access_token
 
-  const data = tab === "courses" ? courses : quickLearnSessions
+      console.log({
+        source_type: tab === "courses" ? "course" : "quick-learn",
+        source_id: selectedContext,
+        card_count: cardCount,
+        content_scope: contentScope,
+        learning_goal: learningGoal,
+      })
+  
+      const response = await fetch("http://localhost:8080/api/create_flashcard_set", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          source_type: tab === "courses" ? "course" : "quick-learn",
+          source_id: selectedContext,
+          card_count: cardCount,
+          content_scope: contentScope,
+          learning_goal: learningGoal,
+        }),
+      })
+  
+      if (!response.ok) {
+        console.error("Failed to create flashcards")
+        return
+      }
+  
+      const data = await response.json()
+      const flashcardSetId = data.flashcard_set_id
+  
+      router.push(`/flashcards/${tab === "courses" ? "course" : "quick-learn"}/${flashcardSetId}`)
+    } catch (error) {
+      console.error("Error generating flashcards:", error)
+    } finally {
+      setIsGenerating(false)
+    }
+  }  
+
+  const data = tab === "courses" ? courses : quickLearns
+  
+  if (loadingCourses || loadingQuickLearns){
+    return (<AppShell><DashboardLoading></DashboardLoading></AppShell>)
+  }
 
   return (
     <AppShell>
@@ -109,13 +182,19 @@ export default function CreateFlashcardsPage() {
                                 <div className="flex-1 min-w-0">
                                   <h3 className="font-medium text-sm line-clamp-1">{item.title}</h3>
                                   <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
-                                    <span>{item.progress}% complete</span>
-                                    <span>{item.lastAccessed}</span>
+                                  <span>
+                                    {item.unit_lessons?.length > 0 
+                                      ? `${Math.round((item.completed / item.unit_lessons.length) * 100)}% complete`
+                                      : "0% complete"}
+                                  </span>
+                                    <span>{new Date(item.last_accessed).toLocaleDateString()}</span>
                                   </div>
                                   <div className="mt-2 h-1.5 w-full bg-muted rounded-full overflow-hidden">
                                     <div
                                       className={`h-full ${isCourse ? "bg-primary" : "bg-secondary"}`}
-                                      style={{ width: `${item.progress}%` }}
+                                      style={{ width: `${item.unit_lessons?.length > 0 
+                                        ? (item.completed / item.unit_lessons.length) * 100 
+                                        : 0}%` }}                                      
                                     />
                                   </div>
                                 </div>
@@ -163,16 +242,16 @@ export default function CreateFlashcardsPage() {
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-sm font-medium">Difficulty level</label>
+                    <label className="text-sm font-medium">Content Scope</label>
                     <div className="flex gap-3">
-                      {["beginner", "intermediate", "advanced"].map((level) => (
+                      {["All Lessons", "Completed Lessons"].map((scope) => (
                         <Button
-                          key={level}
-                          variant={difficulty === level ? (tab === "courses" ? "default" : "secondary") : "outline"}
-                          className={difficulty === level ? (tab === "courses" ? "glow-button" : "glow-button-pink") : ""}
-                          onClick={() => setDifficulty(level)}
+                          key={scope}
+                          variant={contentScope === scope ? (tab === "courses" ? "default" : "secondary") : "outline"}
+                          className={contentScope === scope ? (tab === "courses" ? "glow-button" : "glow-button-pink") : ""}
+                          onClick={() => setContentScope(scope)}
                         >
-                          {level.charAt(0).toUpperCase() + level.slice(1)}
+                          {scope}
                         </Button>
                       ))}
                     </div>
@@ -212,5 +291,21 @@ export default function CreateFlashcardsPage() {
         </div>
       </div>
     </AppShell>
+  )
+}
+
+function DashboardLoading() {
+  return (
+    <div className="flex flex-col justify-center items-center min-h-[80vh] animate-fade-in">
+      <div className="flex items-center justify-center w-20 h-20 rounded-full bg-primary/10">
+        <Sparkles className="h-10 w-10 text-primary animate-spin-slow" />
+      </div>
+      <h2 className="mt-6 text-2xl font-display font-semibold text-center text-secondary">
+        Loading your Create page...
+      </h2>
+      <p className="mt-2 text-muted-foreground text-sm">
+        Preparing your learning journey ✨
+      </p>
+    </div>
   )
 }

@@ -29,12 +29,20 @@ type Course = {
 type SortOption = "progress_asc" | "progress_desc" | "lessons_asc" | "lessons_desc" | "lastAccessed_asc" | "lastAccessed_desc"
 
 export default function CoursesPage() {
+  const [pageLoading, setPageLoading] = useState(true)
   const [courses, setCourses] = useState<Course[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [sortOption, setSortOption] = useState<SortOption>("lastAccessed_desc")
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) router.push("/auth")
+    }
+    
     const fetchData = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
@@ -122,8 +130,47 @@ export default function CoursesPage() {
       }
     }    
   
-    fetchData()
+    checkAuth();
+    Promise.all([
+      fetchData()
+    ]).finally(() => setPageLoading(false));
   }, [router])  
+
+  const handleDeleteCourse = async (courseId: string) => {
+    setIsDeleting(true);
+    setDeleteTarget(courseId);
+    
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      
+      if (!token) {
+        throw new Error("You must be logged in to delete a course");
+      }
+      
+      const response = await fetch(`http://localhost:8080/api/delete_course/${courseId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete course");
+      }
+      
+      // Remove the course from the state
+      setCourses(courses.filter(course => course.id !== courseId));
+      
+    } catch (error) {
+      console.error("Error deleting course:", error);
+      alert("Failed to delete course. Please try again.");
+    } finally {
+      setIsDeleting(false);
+      setDeleteTarget(null);
+    }
+  };
 
   const filteredAndSortedCourses = useMemo(() => {
     const filtered = courses.filter(c =>
@@ -145,6 +192,15 @@ export default function CoursesPage() {
   
     return filtered
   }, [courses, searchTerm, sortOption])  
+  
+  if (pageLoading) {
+    
+    return (<div className="flex-1 w-full mx-auto">
+      <AppShell>
+        <DashboardLoading />
+      </AppShell>
+        </div>)
+  }
 
   return (
     <div className="flex-1 w-full mx-auto">
@@ -253,8 +309,13 @@ export default function CoursesPage() {
                         <Button variant="outline" size="sm" asChild>
                           <Link href={`/courses/${course.id}/edit`}>Edit Outline</Link>
                         </Button>
-                        <Button variant="outline" size="sm" asChild>
-                          <Link href={`/courses/${course.id}/edit`}>Delete Outline</Link>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleDeleteCourse(course.id)}
+                          disabled={isDeleting && deleteTarget === course.id}
+                        >
+                          {isDeleting && deleteTarget === course.id ? 'Deleting...' : 'Delete Outline'}
                         </Button>
                       </>
                     ) : (
@@ -293,6 +354,22 @@ export default function CoursesPage() {
           </div>
         </div>
       </AppShell>
+    </div>
+  )
+}
+
+function DashboardLoading() {
+  return (
+    <div className="flex flex-col justify-center items-center min-h-[80vh] animate-fade-in">
+      <div className="flex items-center justify-center w-20 h-20 rounded-full bg-primary/10">
+        <Sparkles className="h-10 w-10 text-primary animate-spin-slow" />
+      </div>
+      <h2 className="mt-6 text-2xl font-display font-semibold text-center text-primary">
+        Loading your Courses...
+      </h2>
+      <p className="mt-2 text-muted-foreground text-sm">
+        Preparing your learning journey ✨
+      </p>
     </div>
   )
 }

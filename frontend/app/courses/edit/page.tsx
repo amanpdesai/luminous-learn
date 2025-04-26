@@ -9,10 +9,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { useSidebar } from "@/components/ui/sidebar"
 import { supabase } from "@/lib/supabaseClient"
 import { cn } from "@/lib/utils"
-import { PlusIcon, TrashIcon, Loader2Icon } from "lucide-react"
+import { PlusIcon, TrashIcon, Loader2Icon, Sparkles, CheckIcon } from "lucide-react"
 import Link from "next/link"
 import { Label } from "@radix-ui/react-label"
-import tempData from "../../../../backend/temp/test_course.json"
 
 interface Lesson {
   lesson: string
@@ -37,7 +36,17 @@ interface CourseType {
   units: UnitType[]
 }
 
+const steps = [
+  "Analyzing Syllabus",
+  "Confirming Lesson Outlines",
+  "Creating Lesson Generating Threads",
+  "Generating Lesson Specific Content",
+  "Gathering Data",
+  "Finalizing Course",
+]
+
 export default function CourseOutlineEditor() {
+  const [generationStep, setGenerationStep] = useState(0)
   const [isSaving, setIsSaving] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -55,6 +64,10 @@ export default function CourseOutlineEditor() {
 
   useEffect(() => {
     const fetchDraft = async () => {
+      const checkAuth = async () => {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) router.push("/auth")
+      }
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
         router.push("/auth")
@@ -87,7 +100,8 @@ export default function CourseOutlineEditor() {
         router.push("/courses/create")
         return
       }
-  
+      
+      checkAuth()
       originalData.current = parsed as CourseType
       setCourseTitle(parsed.title)
       setCourseDescription(parsed.description)
@@ -168,6 +182,15 @@ export default function CourseOutlineEditor() {
         const token = session.data.session?.access_token
         const user = session.data.session?.user
         if (!user || !token) throw new Error("Not logged in")
+
+        units.flatMap(unit =>
+          unit.lesson_outline.map(lesson => ({
+            unit_number: unit.unit_number,
+            lesson: lesson.lesson,
+            lesson_summary: lesson.lesson_summary,
+            learning_objectives: lesson.learning_objectives || []
+          }))
+        )
     
         const courseData = {
           title: courseTitle,
@@ -180,6 +203,7 @@ export default function CourseOutlineEditor() {
             unit_number: unit.unit_number,
             title: unit.title,
             unit_description: unit.unit_description,
+            lesson_outline: unit.lesson_outline,
           })),
           is_draft: true,
           last_accessed: new Date().toISOString(),
@@ -217,7 +241,7 @@ export default function CourseOutlineEditor() {
     
         const now = new Date().toISOString()
     
-        const unitLessons = units.flatMap(unit =>
+        units.flatMap(unit =>
           unit.lesson_outline.map(lesson => ({
             unit_number: unit.unit_number,
             lesson: lesson.lesson,
@@ -252,10 +276,17 @@ export default function CourseOutlineEditor() {
           },
           body: JSON.stringify(draft),
         })
+
+        for (let i = 0; i < steps.length; i++) {
+          setGenerationStep(i)
+          await new Promise((resolve) => setTimeout(resolve, 1200))
+        }
     
         if (!response.ok) throw new Error("Failed to publish course")
+        const result = await response.json()
+        const generatedCourseId = result[0].id
     
-        router.push("/courses")
+        router.push(`/courses/${generatedCourseId}`)
       } catch (err) {
         console.error("Error publishing course:", err)
         alert("Failed to publish course. Please try again.")
@@ -264,7 +295,41 @@ export default function CourseOutlineEditor() {
       }
     }    
 
-  if (isLoading) return <div className="text-center text-muted-foreground py-12">Loading course data...</div>
+    if (isLoading) {
+      return <AppShell><DashboardLoading /></AppShell>
+    }
+    
+    if (isPublishing){
+      return (
+        <AppShell>
+          <div className="w-full px-6 md:px-12 xl:px-24 max-w-4xl mx-auto mt-24">
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-8">
+              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
+                <Sparkles className="h-8 w-8 text-primary" />
+              </div>
+              <h1 className="text-3xl font-display glow-text">Creating Your Course</h1>
+              <div className="w-full max-w-md space-y-6">
+                {steps.map((step, index) => (
+                  <div key={index} className="flex items-center gap-3">
+                    <div
+                      className={`h-8 w-8 rounded-full flex items-center justify-center ${
+                        index <= generationStep ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {index < generationStep ? <CheckIcon className="h-5 w-5" /> : <span>{index + 1}</span>}
+                    </div>
+                    <span className={index <= generationStep ? "text-foreground" : "text-muted-foreground"}>{step}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-muted-foreground">
+                This may take a minute. We&apos;re crafting a personalized course structure for you.
+              </p>
+            </div>
+          </div>
+        </AppShell>
+      )
+    }
 
   return (
     <AppShell>
@@ -346,5 +411,21 @@ export default function CourseOutlineEditor() {
         </div>
       </div>
     </AppShell>
+  )
+}
+
+function DashboardLoading() {
+  return (
+    <div className="flex flex-col justify-center items-center min-h-[80vh] animate-fade-in">
+      <div className="flex items-center justify-center w-20 h-20 rounded-full bg-primary/10">
+        <Sparkles className="h-10 w-10 text-primary animate-spin-slow" />
+      </div>
+      <h2 className="mt-6 text-2xl font-display font-semibold text-center text-primary">
+        Loading your Course Editor...
+      </h2>
+      <p className="mt-2 text-muted-foreground text-sm">
+        Preparing your learning journey ✨
+      </p>
+    </div>
   )
 }

@@ -10,22 +10,47 @@ import { Input } from "@/components/ui/input"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ArrowLeft, Check, Clock, X } from "lucide-react"
+import { ArrowLeft, Check, Clock, Sparkles, X } from "lucide-react"
 import Link from "next/link"
+import { supabase } from "@/lib/supabaseClient"
 
 type QuestionType = "multiple-choice" | "written" | "true-false"
 
 interface Question {
-  id: number
+  cardId: string
   type: QuestionType
   question: string
   answer: string
   options?: string[]
   userAnswer?: string
   isCorrect?: boolean
+  isSkipped?: boolean
 }
 
+interface Flashcard {
+  id: string
+  front: string
+  back: string
+  correct: number
+  incorrect: number
+  multiplechoice?: {
+    question: string
+    choices: string[]
+    correct_choice: string
+  }
+  trueorfalseq?: {
+    question: string
+    answer: boolean
+  }
+  freeresponse?: {
+    question: string
+    answer: string
+  }
+}
+
+
 export default function TestViewPage() {
+  const [pageLoading, setPageLoading] = useState(true)
   const params = useParams() as { type: string; id: string }
   const router = useRouter()
   const [testStarted, setTestStarted] = useState(false)
@@ -33,6 +58,7 @@ export default function TestViewPage() {
   const [questions, setQuestions] = useState<Question[]>([])
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({})
+  const [flashcardSetTitle, setFlashcardSetTitle] = useState("Flashcards")
   const [testResults, setTestResults] = useState({
     correct: 0,
     incorrect: 0,
@@ -51,28 +77,44 @@ export default function TestViewPage() {
   const [timerActive, setTimerActive] = useState(false)
 
   // Determine if this is a course or quick learn flashcard set
-  const isCourse = params.type === "course"
+  const [flashcards, setFlashcards] = useState<Flashcard[]>([])
 
-  // Get title based on type and ID
-  const getTitle = () => {
-    if (isCourse) {
-      return params.id === "1"
-        ? "Introduction to Python Programming"
-        : params.id === "2"
-          ? "Web Development Fundamentals"
-          : "Data Science Essentials"
-    } else {
-      return params.id === "1"
-        ? "JavaScript Promises"
-        : params.id === "2"
-          ? "CSS Grid Layout"
-          : params.id === "3"
-            ? "React Hooks"
-            : "Python List Comprehensions"
+  useEffect(() => {
+    const fetchFlashcards = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push("/auth")
+        return
+      }
+
+      const token = session.access_token
+
+      const res = await fetch(`http://localhost:8080/api/flashcards/${params.type}/${params.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!res.ok) {
+        throw new Error("Failed to fetch flashcards")
+      }
+
+      const data = await res.json()
+      const loadedFlashcards = data.flashcard_set.flashcards?.flashcards ?? []
+      const loadedTitle = data.flashcard_set.title ?? "Flashcards"
+
+      setFlashcards(loadedFlashcards)
+      setFlashcardSetTitle(loadedTitle)
+    } catch (error) {
+      console.error("Failed to fetch flashcards:", error)
+    } finally{
+      setPageLoading(false)
     }
   }
 
-  const title = getTitle()
+  fetchFlashcards()
+  }, [params.type, params.id, router])
 
   // Timer effect
   useEffect(() => {
@@ -97,100 +139,75 @@ export default function TestViewPage() {
   }
 
   const handleStartTest = () => {
-    // Generate questions from flashcards
-    const flashcards = isCourse
-      ? [
-          {
-            front: "What is a variable in Python?",
-            back: "A variable is a named location in memory that stores a value. In Python, variables are created when you assign a value to them.",
-          },
-          {
-            front: "What is the difference between a list and a tuple in Python?",
-            back: "Lists are mutable (can be changed after creation) while tuples are immutable (cannot be changed after creation). Lists use square brackets [] and tuples use parentheses ().",
-          },
-          {
-            front: "What is a function in Python?",
-            back: "A function is a block of organized, reusable code that performs a specific task. Functions are defined using the 'def' keyword.",
-          },
-          {
-            front: "What is object-oriented programming?",
-            back: "Object-oriented programming (OOP) is a programming paradigm based on the concept of 'objects', which can contain data and code. Data in the form of fields (attributes), and code in the form of procedures (methods).",
-          },
-          {
-            front: "What is inheritance in OOP?",
-            back: "Inheritance is a mechanism where a new class (child class) is derived from an existing class (parent class). The child class inherits attributes and methods from the parent class.",
-          },
-        ]
-      : [
-          {
-            front: "What is a Promise in JavaScript?",
-            back: "A Promise is an object representing the eventual completion or failure of an asynchronous operation and its resulting value.",
-          },
-          {
-            front: "What are the three states of a Promise?",
-            back: "Pending: initial state, neither fulfilled nor rejected\nFulfilled: operation completed successfully\nRejected: operation failed",
-          },
-          {
-            front: "How do you create a new Promise?",
-            back: "Using the Promise constructor:\n\nconst myPromise = new Promise((resolve, reject) => {\n  // Asynchronous operation\n});",
-          },
-          {
-            front: "What is the purpose of the .then() method?",
-            back: "The .then() method is used to specify what should happen when a Promise is fulfilled. It returns a new Promise, allowing for method chaining.",
-          },
-          {
-            front: "What is the purpose of the .catch() method?",
-            back: "The .catch() method is used to handle errors in a Promise chain. It catches any rejections that occur in the preceding Promises.",
-          },
-        ]
-
-    // Generate test questions based on configuration
-    const generatedQuestions: Question[] = []
-
-    // Limit to the number of questions requested
-    const numQuestions = Math.min(questionCount, flashcards.length)
-
-    for (let i = 0; i < numQuestions; i++) {
-      const card = flashcards[i]
-
-      // Determine question type based on selected types
-      const questionType = selectedTypes[i % selectedTypes.length]
-
-      const question: Question = {
-        id: i,
-        type: questionType,
-        question: card.front,
-        answer: card.back,
-      }
-
-      // Add options for multiple choice
-      if (questionType === "multiple-choice") {
-        // Generate distractors (in a real app, these would be more sophisticated)
-        const distractors = [
-          "This is an incorrect option 1",
-          "This is an incorrect option 2",
-          "This is an incorrect option 3",
-        ]
-
-        // Shuffle options including the correct answer
-        const options = [...distractors, card.back].sort(() => Math.random() - 0.5)
-
-        question.options = options
-      }
-
-      // Add options for true/false
-      if (questionType === "true-false") {
-        question.options = ["True", "False"]
-      }
-
-      generatedQuestions.push(question)
+    if (flashcards.length === 0) {
+      console.error("No flashcards available")
+      return
     }
-
+  
+    // Apply filtering if user chose "Still Learning" only
+    let filteredFlashcards = flashcards
+    if (sourceFilter === "learning") {
+      filteredFlashcards = flashcards.filter(card => card.correct === 0 && card.incorrect === 0)
+    }
+  
+    // Shuffle flashcards
+    const shuffled = [...filteredFlashcards].sort(() => Math.random() - 0.5)
+  
+    const selected = shuffled.slice(0, Math.min(questionCount, shuffled.length))
+  
+    const generatedQuestions: Question[] = selected.map((card, index) => {
+      const availableTypes = [
+        { type: "multiple-choice" as QuestionType, available: !!card.multiplechoice?.question },
+        { type: "written" as QuestionType, available: !!card.freeresponse?.question },
+        { type: "true-false" as QuestionType, available: !!card.trueorfalseq?.question },
+      ].filter(t => t.available)
+  
+      if (availableTypes.length === 0) return null
+  
+      const chosen = availableTypes[Math.floor(Math.random() * availableTypes.length)].type
+  
+      if (chosen === "multiple-choice" && card.multiplechoice) {
+        return {
+          id: index,
+          cardId: card.id,
+          type: "multiple-choice",
+          question: card.multiplechoice.question,
+          answer: card.multiplechoice.correct_choice,
+          options: card.multiplechoice.choices,
+        }
+      }
+  
+      if (chosen === "true-false" && card.trueorfalseq) {
+        return {
+          id: index,
+          cardId: card.id,
+          type: "true-false",
+          question: card.trueorfalseq.question,
+          answer: card.trueorfalseq.answer ? "True" : "False",
+          options: ["True", "False"],
+        }
+      }
+  
+      if (card.freeresponse) {
+        return {
+          id: index,
+          cardId: card.id,
+          type: "written",
+          question: card.freeresponse.question,
+          answer: card.freeresponse.answer,
+        }
+      }
+      
+      // Fallback in case none of the question types are available
+      return null
+    }).filter(Boolean) as Question[]
+  
     setQuestions(generatedQuestions)
     setTestStarted(true)
     setTimerActive(true)
     setTimeElapsed(0)
-  }
+  }  
+  
 
   const handleAnswerChange = (answer: string, index: number) => {
     setUserAnswers((prev) => ({
@@ -211,49 +228,78 @@ export default function TestViewPage() {
     }
   }
 
-  const handleSubmitTest = () => {
+  const handleSubmitTest = async () => {
     setTimerActive(false)
-
-    // Calculate results
+  
     let correct = 0
     const gradedQuestions = questions.map((question, index) => {
       const userAnswer = userAnswers[index] || ""
       let isCorrect = false
-
+  
       if (question.type === "multiple-choice" || question.type === "true-false") {
-        if (question.type === "true-false") {
-          // For true/false, "True" is always correct in this mock
-          isCorrect = userAnswer === "True"
-        } else {
-          // For multiple choice, check if selected option matches the answer
-          isCorrect = userAnswer === question.answer
-        }
+        isCorrect = userAnswer === question.answer
       } else if (question.type === "written") {
-        // For written response, do a simple check
         const simplifiedInput = userAnswer.toLowerCase().trim()
         const simplifiedAnswer = question.answer.toLowerCase().trim()
         isCorrect = simplifiedInput.includes(simplifiedAnswer.substring(0, 10))
       }
-
+  
       if (isCorrect) correct++
-
-      return {
-        ...question,
-        userAnswer,
-        isCorrect,
-      }
+  
+      return { ...question, userAnswer, isCorrect }
     })
-
+  
     setQuestions(gradedQuestions)
     setTestResults({
       correct,
-      incorrect: questions.length - correct,
-      total: questions.length,
-      score: Math.round((correct / questions.length) * 100),
+      incorrect: gradedQuestions.length - correct,
+      total: gradedQuestions.length,
+      score: Math.round((correct / gradedQuestions.length) * 100),
     })
-
     setTestCompleted(true)
-  }
+  
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+  
+      const token = session.access_token
+  
+      // Update each flashcard individually
+      const cardUpdates = gradedQuestions.reduce((acc, q) => {
+        if (!acc[q.cardId]) acc[q.cardId] = { correct: 0, incorrect: 0 }
+  
+        if (q.isCorrect) acc[q.cardId].correct += 1
+        else acc[q.cardId].incorrect += 1
+  
+        return acc
+      }, {} as Record<string, { correct: number; incorrect: number }>)
+  
+      for (const [cardId, counts] of Object.entries(cardUpdates)) {
+        await fetch(`http://localhost:8080/api/flashcards/update_card_progress/${params.type}/${params.id}/${cardId}`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(counts),
+        })
+      }
+  
+      // Update the flashcard set's last_test_score
+      await fetch(`http://localhost:8080/api/flashcards/update_flashcard_set_progress/${params.type}/${params.id}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          last_test_score: Math.round((correct / gradedQuestions.length) * 100),
+        }),
+      })
+    } catch (error) {
+      console.error("Error updating flashcards after test:", error)
+    }
+  }  
 
   const renderQuestion = (question: Question, index: number) => {
     const userAnswer = userAnswers[index] || ""
@@ -348,20 +394,16 @@ export default function TestViewPage() {
         return (
           <div className="space-y-4">
             <h3 className="text-xl font-medium">{question.question}</h3>
-            <p className="text-muted-foreground">Is the following statement true?</p>
-            <div className="p-4 bg-muted/30 rounded-md border border-border">
-              <p>{question.answer}</p>
-            </div>
-
+            
             <div className="flex gap-4 pt-2">
               {question.options?.map((option, optIndex) => (
                 <Button
                   key={optIndex}
                   variant={userAnswer === option ? "default" : "outline"}
                   className={`flex-1 ${
-                    testCompleted && option === "True"
+                    testCompleted && option === question.answer
                       ? "border-green-500 text-green-500"
-                      : testCompleted && option === userAnswer && option !== "True"
+                      : testCompleted && option === userAnswer && option !== question.answer
                         ? "border-red-500 text-red-500"
                         : ""
                   }`}
@@ -708,6 +750,10 @@ export default function TestViewPage() {
     }
   }
 
+  if (pageLoading){
+    return (<AppShell><DashboardLoading/></AppShell>)
+  }
+
   return (
     <AppShell>
       <div className="space-y-10 w-full px-6 sm:px-10 lg:px-16 xl:px-24 pt-12 pb-24 max-w-5xl mx-auto">
@@ -717,7 +763,7 @@ export default function TestViewPage() {
             className="flex items-center text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to {title}
+            Back to {flashcardSetTitle}
           </Link>
         </div>
 
@@ -746,5 +792,21 @@ export default function TestViewPage() {
         </div>
       </div>
     </AppShell>
+  )
+}
+
+function DashboardLoading() {
+  return (
+    <div className="flex flex-col justify-center items-center min-h-[80vh] animate-fade-in">
+      <div className="flex items-center justify-center w-20 h-20 rounded-full bg-primary/10">
+        <Sparkles className="h-10 w-10 text-primary animate-spin-slow" />
+      </div>
+      <h2 className="mt-6 text-2xl font-display font-semibold text-center text-secondary">
+        Loading your Test...
+      </h2>
+      <p className="mt-2 text-muted-foreground text-sm">
+        Preparing your learning journey ✨
+      </p>
+    </div>
   )
 }

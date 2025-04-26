@@ -9,6 +9,7 @@ import {
   Search,
   BookOpen,
   Filter,
+  Sparkles,
 } from "lucide-react"
 import { parseISO, formatDistanceToNowStrict } from "date-fns"
 
@@ -54,6 +55,7 @@ type SortOption =
   | "lastAccessed_desc"
 
 export default function QuickLearnPage() {
+  const [pageLoading, setPageLoading] = useState(true)
   const [sessions, setSessions] = useState<QuickLearnSession[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [sortOption, setSortOption] = useState<SortOption>("lastAccessed_desc")
@@ -132,7 +134,9 @@ export default function QuickLearnPage() {
       }
     }    
     checkAuth()
+    Promise.all([
     fetchSessions()
+    ]).finally(() => setPageLoading(false));
   }, [router])
 
   const filteredAndSortedSessions = useMemo(() => {
@@ -165,6 +169,10 @@ export default function QuickLearnPage() {
   }, [sessions, searchTerm, sortOption])  
 
   console.log(filteredAndSortedSessions)
+
+  if (pageLoading){
+    return (<AppShell><DashboardLoading></DashboardLoading></AppShell>)
+  }
 
   return (
     <div className="flex-1 w-full mx-auto">
@@ -320,6 +328,22 @@ export default function QuickLearnPage() {
           </div>
         </div>
       </AppShell>
+    </div>
+  )
+}
+
+function DashboardLoading() {
+  return (
+    <div className="flex flex-col justify-center items-center min-h-[80vh] animate-fade-in">
+      <div className="flex items-center justify-center w-20 h-20 rounded-full bg-secondary/10">
+        <Sparkles className="h-10 w-10 text-secondary animate-spin-slow" />
+      </div>
+      <h2 className="mt-6 text-2xl font-display font-semibold text-center text-secondary">
+        Loading your Quick Learns...
+      </h2>
+      <p className="mt-2 text-muted-foreground text-sm">
+        Preparing your learning journey ✨
+      </p>
     </div>
   )
 }
