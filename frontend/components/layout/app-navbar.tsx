@@ -13,7 +13,7 @@ export function AppNavbar({ title, description }: AppNavbarProps) {
   return (
     <header className="border-b border-border/40 backdrop-blur-sm sticky top-0 z-50">
       <div className="flex h-16 items-center px-4 sm:px-6">
-        <SidebarTrigger />
+        <SidebarTrigger size={"lg"} />
         <div className="ml-3 flex-1 flex items-center gap-4">
           {(title || description) && (
             <div className="hidden md:block">
@@ -32,7 +32,7 @@ export function AppNavbar({ title, description }: AppNavbarProps) {
         </div>
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" className="rounded-full">
-            <Bell className="h-5 w-5" />
+            <Bell className="!h-6 !w-6" />
             <span className="sr-only">Notifications</span>
           </Button>
           <ModeToggle />

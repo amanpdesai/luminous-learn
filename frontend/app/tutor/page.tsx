@@ -476,10 +476,40 @@ export default function TutorPage() {
 
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 <Tabs defaultValue="courses">
-                  <TabsList className="w-full grid grid-cols-3">
-                    <TabsTrigger value="courses">Courses</TabsTrigger>
-                    <TabsTrigger value="flashcards">Flashcards</TabsTrigger>
-                    <TabsTrigger value="upload">Upload</TabsTrigger>
+                  <TabsList className="inline-flex justify-center items-center px-1 py-5 bg-card border border-border rounded-full mb-6 z-10 relative shadow-sm">
+                    <TabsTrigger
+                      value="courses"
+                      className="px-3 py-4 text-base font-medium rounded-full transition-all
+                        text-muted-foreground hover:text-foreground
+                        data-[state=active]:text-white
+                        data-[state=active]:bg-primary/60
+                        data-[state=active]:shadow
+                        data-[state=active]:glow-text"
+                    >
+                      Courses
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="flashcards"
+                      className="px-3 py-4 text-base font-medium rounded-full transition-all
+                        text-muted-foreground hover:text-foreground
+                        data-[state=active]:text-white
+                        data-[state=active]:bg-primary/60
+                        data-[state=active]:shadow
+                        data-[state=active]:glow-text"
+                    >
+                      Flashcards
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="upload"
+                      className="px-3 py-4 text-base font-medium rounded-full transition-all
+                        text-muted-foreground hover:text-foreground
+                        data-[state=active]:text-white
+                        data-[state=active]:bg-primary/60
+                        data-[state=active]:shadow
+                        data-[state=active]:glow-text"
+                    >
+                      Upload
+                    </TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="courses" className="mt-4 space-y-4 animate-in fade-in-50 duration-300">

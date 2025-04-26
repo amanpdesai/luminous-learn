@@ -3,12 +3,13 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { BookOpen, Calendar, Clock, ExternalLink, Layers, Plus, Zap } from "lucide-react"
+import { BookOpen, Calendar, Clock, ExternalLink, Layers, Plus, Search, Zap } from "lucide-react"
 import Link from "next/link"
 import { AppShell } from "@/components/layout/app-shell"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 import { supabase } from "@/lib/supabaseClient"
+import { Input } from "@/components/ui/input";
 
 export default function FlashcardsPage() {
   const router = useRouter();
@@ -89,7 +90,15 @@ export default function FlashcardsPage() {
               <h1 className="text-3xl font-display glow-text">Flashcards</h1>
               <p className="text-muted-foreground">Review and practice with your flashcard sets</p>
             </div>
-            <div className="sm:ml-auto">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search flashcards..."
+                  className="w-[250px] pl-8 rounded-lg border-border/40 bg-muted/40"
+                />
+              </div>
               <Button className="glow-button w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
                 Create Flashcard Set
@@ -98,15 +107,30 @@ export default function FlashcardsPage() {
           </div>
 
           <Tabs defaultValue="courses" className="space-y-6">
-            <TabsList className="w-full max-w-md">
-              <TabsTrigger value="courses" className="flex-1">
-                Course Flashcards
-              </TabsTrigger>
-              <TabsTrigger value="quick-learn" className="flex-1">
-                Quick Learn Flashcards
-              </TabsTrigger>
-            </TabsList>
-
+          <TabsList className="inline-flex justify-start items-center px-1 py-6 bg-card border border-border rounded-full mb-6 z-10 relative shadow-sm">
+            <TabsTrigger
+              value="courses"
+              className="px-6 py-5 text-base font-medium rounded-full transition-all
+                text-muted-foreground hover:text-foreground
+                data-[state=active]:text-white
+                data-[state=active]:bg-primary/60
+                data-[state=active]:shadow
+                data-[state=active]:glow-text"
+            >
+              Course Flashcards
+            </TabsTrigger>
+            <TabsTrigger
+              value="quick-learn"
+              className="px-6 py-5 text-base font-medium rounded-full transition-all
+                text-muted-foreground hover:text-foreground
+                data-[state=active]:text-white
+                data-[state=active]:bg-primary/60
+                data-[state=active]:shadow
+                data-[state=active]:glow-text"
+            >
+              Quick Learn Flashcards
+            </TabsTrigger>
+          </TabsList>
             <TabsContent value="courses" className="space-y-6 animate-in fade-in-50 duration-300">
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {courseSets.map((set) => (

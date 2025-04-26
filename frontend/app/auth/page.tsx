@@ -115,15 +115,30 @@ export default function AuthPage() {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue={activeTab} value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-6">
-                  <TabsTrigger value="login" className="data-[state=active]:glow-text">
+                <TabsList className="inline-flex justify-center items-center w-full mb-6 p-2 bg-card border border-border rounded-md z-10 relative">
+                  <TabsTrigger
+                    value="login"
+                    className="px-5 py-3 text-sm font-medium rounded-md transition-all
+                      text-muted-foreground hover:text-foreground
+                      data-[state=active]:text-white
+                      data-[state=active]:bg-primary/60
+                      data-[state=active]:shadow-sm
+                      data-[state=active]:glow-text"
+                  >
                     Login
                   </TabsTrigger>
-                  <TabsTrigger value="signup" className="data-[state=active]:glow-text">
+                  <TabsTrigger
+                    value="signup"
+                    className="px-5 py-3 text-sm font-medium rounded-md transition-all
+                      text-muted-foreground hover:text-foreground
+                      data-[state=active]:text-white
+                      data-[state=active]:bg-primary/60
+                      data-[state=active]:shadow-sm
+                      data-[state=active]:glow-text"
+                  >
                     Sign Up
                   </TabsTrigger>
                 </TabsList>
-
                 <TabsContent value="login" className="space-y-4 animate-in fade-in-50 duration-300">
                   <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-2">

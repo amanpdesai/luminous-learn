@@ -3,12 +3,13 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { BookOpen, Clock, Edit, Plus, Sparkles } from "lucide-react"
+import { BookOpen, Clock, Edit, Plus, Search, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { AppShell } from "@/components/layout/app-shell"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 import { supabase } from "@/lib/supabaseClient"
+import { Input } from "@/components/ui/input";
 
 export default function CoursesPage() {
   // Mock course data
@@ -91,7 +92,15 @@ export default function CoursesPage() {
               <h1 className="text-3xl font-display glow-text mb-1">My Courses</h1>
               <p className="text-muted-foreground">Manage and continue your learning journey</p>
             </div>
-            <div className="sm:ml-auto">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search courses..."
+                  className="w-[250px] pl-8 rounded-lg border-border/40 bg-muted/40"
+                />
+              </div>
               <Button className="glow-button w-full sm:w-auto" asChild>
                 <Link href="/create-course">
                   <Plus className="mr-2 h-4 w-4" />

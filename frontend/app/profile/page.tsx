@@ -69,14 +69,38 @@ export default function ProfilePage() {
           </div>
 
           <Tabs defaultValue="activity" className="space-y-6">
-            <TabsList className="w-full max-w-md">
-              <TabsTrigger value="activity" className="flex-1">
+            <TabsList className="inline-flex justify-center items-center px-1 py-5 bg-card border border-border rounded-full mb-6 z-10 relative shadow-sm w-full max-w-md">
+              <TabsTrigger
+                value="activity"
+                className="flex-1 px-6 py-4 text-base font-medium rounded-full transition-all
+                  text-muted-foreground hover:text-foreground
+                  data-[state=active]:text-white
+                  data-[state=active]:bg-primary/60
+                  data-[state=active]:shadow
+                  data-[state=active]:glow-text"
+              >
                 Activity
               </TabsTrigger>
-              <TabsTrigger value="achievements" className="flex-1">
+              <TabsTrigger
+                value="achievements"
+                className="flex-1 px-6 py-4 text-base font-medium rounded-full transition-all
+                  text-muted-foreground hover:text-foreground
+                  data-[state=active]:text-white
+                  data-[state=active]:bg-primary/60
+                  data-[state=active]:shadow
+                  data-[state=active]:glow-text"
+              >
                 Achievements
               </TabsTrigger>
-              <TabsTrigger value="stats" className="flex-1">
+              <TabsTrigger
+                value="stats"
+                className="flex-1 px-6 py-4 text-base font-medium rounded-full transition-all
+                  text-muted-foreground hover:text-foreground
+                  data-[state=active]:text-white
+                  data-[state=active]:bg-primary/60
+                  data-[state=active]:shadow
+                  data-[state=active]:glow-text"
+              >
                 Learning Stats
               </TabsTrigger>
             </TabsList>

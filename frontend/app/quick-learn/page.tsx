@@ -8,6 +8,7 @@ import {
   Clock,
   ExternalLink,
   Plus,
+  Search,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -22,6 +23,7 @@ import {
 import { AppShell } from "@/components/layout/app-shell"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabaseClient"
+import { Input } from "@/components/ui/input"
 
 export default function QuickLearnPage() {
   const router = useRouter();
@@ -97,7 +99,15 @@ export default function QuickLearnPage() {
               <h1 className="text-3xl font-display glow-text-pink mb-1">Quick Learn</h1>
               <p className="text-muted-foreground">Fast, focused learning on specific topics</p>
             </div>
-            <div>
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search quick learns..."
+                  className="w-[250px] pl-8 rounded-lg border-border/40 bg-muted/40"
+                />
+              </div>
               <Button className="glow-button-pink bg-secondary hover:bg-secondary/90" asChild>
                 <Link href="/quick-learn/create">
                   <Zap className="mr-2 h-4 w-4" />

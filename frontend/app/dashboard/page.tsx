@@ -67,10 +67,32 @@ export default function DashboardPage() {
       </div>
 
       <Tabs defaultValue="courses" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="courses">My Courses</TabsTrigger>
-          <TabsTrigger value="quick-learn">Quick Learn</TabsTrigger>
-        </TabsList>
+      <div className="-ml-1"> {/* adjust margin here as needed */}
+      <TabsList className="inline-flex justify-center items-center px-1 py-5 bg-card border border-border rounded-full mb-6 z-10 relative shadow-sm w-fit mx-auto">
+      <TabsTrigger
+        value="courses"
+        className="px-7 py-4 text-base font-medium rounded-full transition-all
+          text-muted-foreground hover:text-foreground
+          data-[state=active]:text-white
+          data-[state=active]:bg-primary/60
+          data-[state=active]:shadow
+          data-[state=active]:glow-text"
+      >
+        My Courses
+      </TabsTrigger>
+      <TabsTrigger
+        value="quick-learn"
+        className="px-7 py-4 text-base font-medium rounded-full transition-all
+          text-muted-foreground hover:text-foreground
+          data-[state=active]:text-white
+          data-[state=active]:bg-primary/60
+          data-[state=active]:shadow
+          data-[state=active]:glow-text"
+      >
+        Quick Learn
+      </TabsTrigger>
+      </TabsList>
+      </div>
         <TabsContent value="courses" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {[
