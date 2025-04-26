@@ -15,11 +15,15 @@ import { Textarea } from "@/components/ui/textarea"
 import { AppShell } from "@/components/layout/app-shell"
 import { supabase } from "@/lib/supabaseClient"
 import Link from "next/link"
+import tempData from "../../../../backend/temp/test_course.json"
 
 export default function CreateCoursePage() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [generationStep, setGenerationStep] = useState(0)
   const router = useRouter()
+  const [topicInput, setTopicInput] = useState("")
+  const [difficultyInput, setDifficultyInput] = useState("Beginner")
+  const [depthInput, setDepthInput] = useState("Standard (5–10 hours)")
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -39,19 +43,39 @@ export default function CreateCoursePage() {
     "Creating Learning Objectives",
   ]
 
-  const simulateLLMCall = async () => {
-    for (let i = 0; i < steps.length; i++) {
-      setGenerationStep(i)
-      await new Promise((res) => setTimeout(res, 1500))
+  const simulateLLMCall = async (topic: string, difficulty: string, depth: string) => {
+    try {
+      const apiCall = fetch("http://localhost:8080/api/generate_syllabus", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic, difficulty, depth }),
+      }).then(res => {
+        if (!res.ok) throw new Error("Failed to generate syllabus")
+        return res.json()
+      })
+  
+      for (let i = 0; i < steps.length; i++) {
+        setGenerationStep(i)
+        await new Promise((resolve) => setTimeout(resolve, 1200))
+      }
+  
+      const data = await apiCall
+      data.course.level = difficultyInput
+      data.course.depth = depthInput
+      console.log(data)
+      localStorage.setItem("draftCourseOutline", JSON.stringify(data))
+      router.push(`/courses/edit`)
+    } catch (error) {
+      console.error(error)
+      alert("Failed to generate course. Please try again.")
+      setIsGenerating(false)
     }
-
-    router.push(`/courses/1/edit`)
-  }
+  }  
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setIsGenerating(true)
-    simulateLLMCall()
+    simulateLLMCall(topicInput, difficultyInput, depthInput)
   }
 
   if (isGenerating) {
@@ -110,14 +134,16 @@ export default function CreateCoursePage() {
                   id="topic"
                   placeholder="E.g., Introduction to Python, History of Renaissance, Digital Marketing Basics..."
                   className="h-24 input-glow resize-none"
+                  value={topicInput}
+                  onChange={(e) => setTopicInput(e.target.value)}
                 />
               </div>
 
               <div className="grid gap-6 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label className="text-base">Difficulty Level</Label>
-                  <RadioGroup defaultValue="beginner" className="grid grid-cols-3 gap-2">
-                    {["beginner", "intermediate", "advanced"].map((level) => (
+                  <RadioGroup value={difficultyInput} onValueChange={setDifficultyInput} className="grid grid-cols-3 gap-2">
+                    {["Beginner", "Intermediate", "Advanced"].map((level) => (
                       <Label
                         key={level}
                         htmlFor={level}
@@ -132,14 +158,14 @@ export default function CreateCoursePage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="depth" className="text-base">Course Depth</Label>
-                  <Select defaultValue="standard">
+                  <Select value={depthInput} onValueChange={setDepthInput}>
                     <SelectTrigger id="depth" className="input-glow">
                       <SelectValue placeholder="Select depth" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="overview">Brief Overview (1–2 hours)</SelectItem>
-                      <SelectItem value="standard">Standard (5–10 hours)</SelectItem>
-                      <SelectItem value="comprehensive">Comprehensive (15+ hours)</SelectItem>
+                      <SelectItem value="Brief Overview (1–2 hours)">Brief Overview (1–2 hours)</SelectItem>
+                      <SelectItem value="Standard (5–10 hours)">Standard (5–10 hours)</SelectItem>
+                      <SelectItem value="Comprehensive (15+ hours)">Comprehensive (15+ hours)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -196,7 +222,7 @@ export default function CreateCoursePage() {
 
               <div className="flex flex-col sm:flex-row gap-4 justify-end pt-6">
                 <Button variant="outline" onClick={() => router.push("/courses")}>Cancel</Button>
-                <Button className="glow-button" type="submit" disabled={isGenerating}>
+                <Button className="glow-button" type="submit" disabled={isGenerating || !topicInput.trim() || !difficultyInput.trim() || !depthInput.trim()}>
                   {isGenerating ? "Generating..." : "Generate Course"}
                 </Button>
               </div>

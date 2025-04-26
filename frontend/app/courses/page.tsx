@@ -15,13 +15,15 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { supabase } from "@/lib/supabaseClient"
 
 type Course = {
-  id: number
+  id: string
   title: string
   description: string
   progress: number
-  lastAccessed: string // ISO string
+  lastAccessed: string
   lessons: number
   completed: number
+  currentUnit: number
+  currentLesson: number
 }
 
 type SortOption = "progress_asc" | "progress_desc" | "lessons_asc" | "lessons_desc" | "lastAccessed_asc" | "lastAccessed_desc"
@@ -33,46 +35,95 @@ export default function CoursesPage() {
   const router = useRouter()
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const fetchData = async () => {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) router.push("/auth")
-    }
-
-    const fetchCourses = async () => {
-      setCourses([
-        {
-          id: 1,
-          title: "DRAFT: Python Basics",
-          description: "Learn Python fundamentals",
-          progress: 50,
-          lastAccessed: "2025-04-21T10:00:00.000Z",
-          lessons: 10,
-          completed: 5,
-        },
-        {
-          id: 2,
-          title: "Web Development Fundamentals",
-          description: "HTML, CSS, and JS",
-          progress: 90,
-          lastAccessed: "2025-04-22T14:00:00.000Z",
-          lessons: 15,
-          completed: 14,
-        },
-        {
-          id: 3,
-          title: "React for Beginners",
-          description: "Learn React quickly",
-          progress: 20,
-          lastAccessed: "2025-04-18T08:00:00.000Z",
-          lessons: 8,
-          completed: 2,
-        },
-      ])
-    }
-
-    checkAuth()
-    fetchCourses()
-  }, [router])
+      if (!session) {
+        router.push("/auth")
+        return
+      }
+    
+      const token = session.access_token
+      if (!token) {
+        console.error("Not authenticated")
+        return
+      }
+    
+      try {
+        const response = await fetch("http://localhost:8080/api/get_user_courses", {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+        })
+    
+        if (!response.ok) {
+          console.error("Failed to fetch courses")
+          return
+        }
+    
+        const rawCourses = await response.json()
+    
+        const shapedCourses = rawCourses.map((course: any) => {
+          const totalLessons = course.unit_lessons?.length ?? 0
+          const completedLessons = course.completed ?? 0
+          const isDraft = course.is_draft === true
+          
+          // Determine current lesson and unit based on progress
+          let currentUnit = 1
+          let currentLesson = 0
+          
+          // If we have unit_lessons, find the first incomplete lesson
+          if (Array.isArray(course.unit_lessons) && course.unit_lessons.length > 0) {
+            const incompleteLesson = course.unit_lessons.find(
+              (lesson: any) => lesson.status !== "completed"
+            )
+            
+            if (incompleteLesson) {
+              // Use the first incomplete lesson
+              currentUnit = incompleteLesson.unit_number || 1
+              
+              // Find the index of this lesson within its unit
+              if (Array.isArray(course.units)) {
+                const unitIndex = course.units.findIndex(
+                  (unit: any) => unit.unit_number === currentUnit
+                )
+                
+                if (unitIndex >= 0 && Array.isArray(course.units[unitIndex]?.lesson_outline)) {
+                  const lessonIndex = course.units[unitIndex].lesson_outline.findIndex(
+                    (outline: any) => outline.lesson === incompleteLesson.lesson
+                  )
+                  
+                  if (lessonIndex >= 0) {
+                    currentLesson = lessonIndex
+                  }
+                }
+              }
+            }
+          }
+        
+          return {
+            id: course.id,
+            title: isDraft 
+              ? `DRAFT: ${course.title ?? "Untitled Course"}`
+              : course.title ?? "Untitled Course",
+            description: course.description ?? "No description provided.",
+            progress: totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0,
+            lastAccessed: course.last_accessed ?? course.created_at ?? new Date().toISOString(),
+            lessons: totalLessons,
+            completed: completedLessons,
+            currentUnit,
+            currentLesson,
+          }
+        })        
+    
+        setCourses(shapedCourses)
+      } catch (err) {
+        console.error("Error fetching courses:", err)
+      }
+    }    
+  
+    fetchData()
+  }, [router])  
 
   const filteredAndSortedCourses = useMemo(() => {
     const filtered = courses.filter(c =>
@@ -212,7 +263,7 @@ export default function CoursesPage() {
                           <Link href={`/courses/${course.id}`}>View Syllabus</Link>
                         </Button>
                         <Button size="sm" className="glow-button" asChild>
-                          <Link href={`/courses/${course.id}`}>Continue</Link>
+                          <Link href={`/courses/${course.id}/lesson/${course.currentUnit ?? 1}/${course.currentLesson ?? 0}`}>Continue</Link>
                         </Button>
                       </>
                     )}
