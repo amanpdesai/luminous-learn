@@ -251,7 +251,7 @@ function CourseOutlineEditor() {
     setIsPublishing(true)
     setTimeout(() => {
       setIsPublishing(false)
-      router.push("/courses")
+      router.push(`/courses/${1}`) // this should be the new course ID
     }, 2000)
   }
 
