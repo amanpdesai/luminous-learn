@@ -1,0 +1,4 @@
+.venv
+frontend/package-lock.json
+node_modules
+frontend/.next

@@ -14,9 +14,9 @@ export function AppNavbar({ title, description }: AppNavbarProps) {
     <header className="border-b border-border/40 backdrop-blur-sm sticky top-0 z-50">
       <div className="flex h-16 items-center px-4 sm:px-6">
         <SidebarTrigger />
-        <div className="ml-4 flex-1 flex items-center gap-4">
+        <div className="ml-3 flex-1 flex items-center justify-center gap-4">
           {(title || description) && (
-            <div className="hidden md:block">
+            <div className="hidden md:block absolute left-16">
               {title && <h1 className="text-lg font-medium">{title}</h1>}
               {description && <p className="text-sm text-muted-foreground">{description}</p>}
             </div>
