@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabaseClient"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -10,7 +9,6 @@ import { BookOpen, Brain, CheckCircle, ChevronRight, FileText, Lightbulb, Sparkl
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const router = useRouter()
 
   useEffect(() => {
     const checkSession = async () => {

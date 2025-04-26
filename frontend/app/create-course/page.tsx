@@ -105,8 +105,10 @@ export default function CreateCoursePage() {
 
   return (
     <AppShell title="Create a New Course" description="Generate a personalized learning experience">
-      <div className="w-full px-6 md:px-12 xl:px-24 max-w-4xl mx-auto">
-        <div className="space-y-6">
+      <div className="flex-1 overflow-auto p-4 sm:p-6 md:p-8">
+      <div className="max-w-4xl mx-auto space-y-6">
+      {/* <div className="w-full px-6 md:px-12 xl:px-24 max-w-4xl mx-auto">
+        <div className="space-y-6"> */}
           <div className="md:hidden">
             <h1 className="text-3xl font-display glow-text">Create a New Course</h1>
             <p className="text-muted-foreground">

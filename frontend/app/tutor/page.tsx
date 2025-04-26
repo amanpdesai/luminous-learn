@@ -79,7 +79,7 @@ export default function TutorPage() {
     }
   
     checkAuthAndScroll()
-  }, [messages])
+  }, [messages, router])
 
   const handleSelectCourse = (course: Course) => {
     // Check if this course is already selected

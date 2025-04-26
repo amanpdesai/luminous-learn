@@ -11,12 +11,12 @@ interface AppShellProps {
 
 export function AppShell({ children, title, description }: AppShellProps) {
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen w-full">
       <AppSidebar />
       <SidebarInset className="flex-1 min-w-0 flex flex-col bg-background">
         <AppNavbar title={title} description={description} />
         {/* Remove internal padding here */}
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 flex flex-col">{children}</main>
       </SidebarInset>
     </div>
   )
