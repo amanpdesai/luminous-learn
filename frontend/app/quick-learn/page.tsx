@@ -1,15 +1,18 @@
 "use client"
 
-import React from "react"
+import { useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
-  FileText,
   Zap,
   Clock,
-  ExternalLink,
-  Plus,
+  Search,
+  BookOpen,
+  Filter,
 } from "lucide-react"
+import { parseISO, formatDistanceToNowStrict } from "date-fns"
 
+import { AppShell } from "@/components/layout/app-shell"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -19,60 +22,104 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { AppShell } from "@/components/layout/app-shell"
+import { Input } from "@/components/ui/input"
+import { Progress } from "@/components/ui/progress"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu"
+import { supabase } from "@/lib/supabaseClient"
+
+type QuickLearnSession = {
+  id: number
+  title: string
+  description: string
+  duration: string
+  progress: number
+  totalLessons: number
+  lastAccessed: string // ISO string
+}
+
+type SortOption =
+  | "progress_asc"
+  | "progress_desc"
+  | "lessons_asc"
+  | "lessons_desc"
+  | "lastAccessed_asc"
+  | "lastAccessed_desc"
 
 export default function QuickLearnPage() {
-  const quickLearnSessions = [
-    {
-      id: 1,
-      title: "JavaScript Promises",
-      description: "Understanding asynchronous programming",
-      date: "2 days ago",
-      duration: "15 min",
-    },
-    {
-      id: 2,
-      title: "CSS Grid Layout",
-      description: "Modern web layouts with CSS Grid",
-      date: "Last week",
-      duration: "10 min",
-    },
-    {
-      id: 3,
-      title: "React Hooks",
-      description: "Using useState and useEffect",
-      date: "Yesterday",
-      duration: "20 min",
-    },
-    {
-      id: 4,
-      title: "Python List Comprehensions",
-      description: "Concise way to create lists in Python",
-      date: "4 days ago",
-      duration: "8 min",
-    },
-    {
-      id: 5,
-      title: "SQL Basics",
-      description: "Introduction to database queries",
-      date: "1 week ago",
-      duration: "12 min",
-    },
-    {
-      id: 6,
-      title: "Git Workflow",
-      description: "Essential commands and branching strategies",
-      date: "3 days ago",
-      duration: "18 min",
-    },
-    {
-      id: 7,
-      title: "TypeScript Interfaces",
-      description: "Type definitions for better code quality",
-      date: "5 days ago",
-      duration: "14 min",
-    },
-  ]
+  const [sessions, setSessions] = useState<QuickLearnSession[]>([])
+  const [searchTerm, setSearchTerm] = useState("")
+  const [sortOption, setSortOption] = useState<SortOption>("lastAccessed_desc")
+  const router = useRouter()
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) router.push("/auth")
+    }
+
+    const fetchSessions = async () => {
+      setSessions([
+        {
+          id: 1,
+          title: "TypeScript Types",
+          description: "TypeScript types and interfaces overview",
+          duration: "12 min",
+          progress: 60,
+          totalLessons: 3,
+          lastAccessed: "2025-04-23T10:00:00.000Z",
+        },
+        {
+          id: 2,
+          title: "JavaScript Promises",
+          description: "Understanding asynchronous programming",
+          duration: "15 min",
+          progress: 80,
+          totalLessons: 5,
+          lastAccessed: "2025-04-22T09:30:00.000Z",
+        },
+        {
+          id: 3,
+          title: "CSS Grid Layout",
+          description: "Modern web layouts with CSS Grid",
+          duration: "10 min",
+          progress: 100,
+          totalLessons: 4,
+          lastAccessed: "2025-04-18T08:00:00.000Z",
+        },
+      ])
+    }
+
+    checkAuth()
+    fetchSessions()
+  }, [router])
+
+  const filteredAndSortedSessions = useMemo(() => {
+    const filtered = sessions.filter(session =>
+      session.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      session.description.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  
+    const [key, direction] = sortOption.split("_")
+  
+    filtered.sort((a, b) => {
+      if (key === "lastAccessed") {
+        const dateA = new Date(a.lastAccessed).getTime()
+        const dateB = new Date(b.lastAccessed).getTime()
+        return direction === "asc" ? dateA - dateB : dateB - dateA
+      } else {
+        const valA = a[key as keyof QuickLearnSession] as number
+        const valB = b[key as keyof QuickLearnSession] as number
+        return direction === "asc" ? valA - valB : valB - valA
+      }
+    })
+  
+    return filtered
+  }, [sessions, searchTerm, sortOption])  
 
   return (
     <div className="flex-1 w-full mx-auto">
@@ -83,18 +130,52 @@ export default function QuickLearnPage() {
               <h1 className="text-3xl font-display glow-text-pink mb-1">Quick Learn</h1>
               <p className="text-muted-foreground">Fast, focused learning on specific topics</p>
             </div>
-            <div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search sessions..."
+                  className="w-[250px] pl-8 rounded-lg border-border/40 bg-muted/40"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="gap-2">
+                    <Filter className="h-4 w-4" />
+                    Sort
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  {[["progress", "Progress"], ["lessons", "Lessons"], ["lastAccessed", "Last Accessed"]].map(
+                    ([key, label]) => (
+                      <div key={key}>
+                        <DropdownMenuItem onClick={() => setSortOption(`${key}_asc` as SortOption)}>
+                          {label} ↑
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setSortOption(`${key}_desc` as SortOption)}>
+                          {label} ↓
+                        </DropdownMenuItem>
+                      </div>
+                    )
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               <Button className="glow-button-pink bg-secondary hover:bg-secondary/90" asChild>
                 <Link href="/quick-learn/create">
                   <Zap className="mr-2 h-4 w-4" />
-                  New Quick Learn Session
+                  New Session
                 </Link>
               </Button>
             </div>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {quickLearnSessions.map((session) => (
+            {filteredAndSortedSessions.map((session) => (
               <Card key={session.id} className="border-border/50 card-hover group">
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-2 text-xs text-secondary mb-1.5">
@@ -107,45 +188,58 @@ export default function QuickLearnPage() {
                   <CardDescription className="mt-1.5 line-clamp-2">{session.description}</CardDescription>
                 </CardHeader>
                 <CardContent className="pb-3">
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">{session.duration}</span>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">{session.duration}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 justify-end">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">
+                          {formatDistanceToNowStrict(parseISO(session.lastAccessed), { addSuffix: true })}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1.5 justify-end">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">{session.date}</span>
+
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs">
+                        <span>Progress</span>
+                        <span className="text-secondary font-medium">{session.progress}%</span>
+                      </div>
+                      <Progress value={session.progress} className="h-2 bg-secondary/10 [&>div]:bg-secondary" />
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <BookOpen className="h-4 w-4" />
+                      <span>{session.totalLessons} lessons</span>
                     </div>
                   </div>
                 </CardContent>
                 <CardFooter className="pt-3">
-                  <Button variant="outline" size="sm" className="w-full" asChild>
-                    <Link href={`/quick-learn/${session.id}`}>
-                      <ExternalLink className="mr-2 h-4 w-4" />
-                      Open Session
-                    </Link>
+                  <Button className="glow-button-pink bg-secondary hover:bg-secondary/90 w-full" asChild>
+                    <Link href={`/quick-learn/${session.id}`}>Continue</Link>
                   </Button>
                 </CardFooter>
               </Card>
             ))}
-
             <Card className="border-border/50 border-dashed bg-muted/50 card-hover">
-              <CardContent className="flex flex-col items-center justify-center h-full py-10">
-                <div className="h-14 w-14 rounded-full bg-secondary/10 flex items-center justify-center mb-4">
-                  <Plus className="h-7 w-7 text-secondary" />
-                </div>
-                <h3 className="text-lg font-medium mb-2">Start Quick Learn</h3>
-                <p className="text-sm text-muted-foreground text-center mb-5 max-w-xs">
-                  Create a focused learning session on a specific topic in minutes
-                </p>
-                <Button className="glow-button-pink bg-secondary hover:bg-secondary/90" asChild>
-                  <Link href="/quick-learn/create">
-                    <Zap className="mr-2 h-4 w-4" />
-                    Start
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
+            <CardContent className="flex flex-col items-center justify-center h-full py-10">
+              <div className="h-14 w-14 rounded-full bg-secondary/10 flex items-center justify-center mb-4">
+                <Zap className="h-7 w-7 text-secondary" />
+              </div>
+              <h3 className="text-lg font-medium mb-2">Quick Learn</h3>
+              <p className="text-sm text-muted-foreground text-center mb-5 max-w-xs">
+                Create a focused single-topic lesson in minutes
+              </p>
+              <Button className="glow-button-pink bg-secondary hover:bg-secondary/90" asChild>
+                <Link href="/quick-learn/create">
+                  <Zap className="mr-2 h-4 w-4" />
+                  Start Quick Learn
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
           </div>
         </div>
       </AppShell>

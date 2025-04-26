@@ -1,33 +1,39 @@
 "use client"
 
 import type React from "react"
-
-import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
-import { Separator } from "@/components/ui/separator"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { BookOpen, ChevronLeft, ChevronRight, FileText, Lightbulb, MoreHorizontal, Play, Plus } from "lucide-react"
-import Link from "next/link"
 import { useState } from "react"
+import Link from "next/link"
+import { AppShell } from "@/components/layout/app-shell"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, Clock, FileText, Lightbulb, List, Zap } from "lucide-react"
+import { useParams } from "next/navigation"
+import { MarkdownRenderer } from "@/components/ui/markdown-render"
+import TurndownService from "turndown"
 
-export default function QuickLearnSessionPage({ params }: { params: { id: string } }) {
-  const [activeSection, setActiveSection] = useState(0)
+export default function QuickLearnPage() {
+  const params = useParams()
+  const { id } = params
+  const [currentSection, setCurrentSection] = useState(0)
+  const [isCompleted, setIsCompleted] = useState(false)
+  const [activeTab, setActiveTab] = useState("content")
 
   // Mock quick learn session data
   const session = {
-    id: params.id,
+    id: id,
     title: "JavaScript Promises and Async Programming",
     description:
       "A focused session on understanding JavaScript Promises, async/await syntax, and asynchronous programming patterns.",
+    duration: "25 min",
     progress: 45,
-    totalSections: 5,
-    completedSections: 2,
-    estimatedTime: "25 minutes",
-    lastAccessed: "1 day ago",
     sections: [
       {
+        id: 1,
         title: "Introduction to Promises",
-        completed: true,
+        type: "content",
+        duration: "5 min",
+        status: "in progress",
         content: `
           <h2>Introduction to Promises</h2>
           <p>Promises are objects that represent the eventual completion (or failure) of an asynchronous operation and its resulting value.</p>
@@ -81,8 +87,11 @@ fetchData()
         `,
       },
       {
+        id: 2,
         title: "Promise Chaining",
-        completed: true,
+        type: "content",
+        duration: "5 min",
+        status: "not started",
         content: `
           <h2>Promise Chaining</h2>
           <p>One of the most powerful features of Promises is the ability to chain them together for sequential asynchronous operations.</p>
@@ -145,8 +154,11 @@ fetchData()
         `,
       },
       {
+        id: 3,
         title: "Promise.all and Promise.race",
-        completed: false,
+        type: "content",
+        duration: "5 min",
+        status: "not started",
         content: `
           <h2>Promise.all and Promise.race</h2>
           <p>JavaScript provides static methods to work with multiple promises simultaneously.</p>
@@ -218,8 +230,11 @@ fetchWithTimeout('https://api.example.com/data', 5000)
         `,
       },
       {
+        id: 4,
         title: "Async/Await Syntax",
-        completed: false,
+        type: "content",
+        duration: "5 min",
+        status: "not started",
         content: `
           <h2>Async/Await Syntax</h2>
           <p>Async/await is syntactic sugar built on top of Promises, making asynchronous code look and behave more like synchronous code.</p>
@@ -323,8 +338,11 @@ greet().then(message => {
         `,
       },
       {
+        id: 5,
         title: "Real-world Patterns and Best Practices",
-        completed: false,
+        type: "content",
+        duration: "5 min",
+        status: "not started",
         content: `
           <h2>Real-world Patterns and Best Practices</h2>
           <p>Let's explore some common patterns and best practices for working with Promises and async/await in real-world applications.</p>
@@ -452,250 +470,441 @@ greet().then(message => {
         `,
       },
     ],
+    resources: [
+      {
+        title: "MDN Promise Documentation",
+        url: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise",
+        type: "documentation",
+      },
+      {
+        title: "JavaScript.info: Promises, async/await",
+        url: "https://javascript.info/async",
+        type: "guide",
+      },
+      {
+        title: "Async JavaScript: From Callbacks to Promises to Async/Await",
+        url: "https://tylermcginnis.com/async-javascript-from-callbacks-to-promises-to-async-await/",
+        type: "article",
+      },
+    ],
+    quiz: [
+      {
+        question: "What is the initial state of a Promise?",
+        options: ["Fulfilled", "Rejected", "Pending", "Settled"],
+        correctAnswer: 2,
+      },
+      {
+        question: "Which method is used to handle errors in a Promise chain?",
+        options: [".error()", ".fail()", ".catch()", ".reject()"],
+        correctAnswer: 2,
+      },
+      {
+        question: "What does Promise.all() do?",
+        options: [
+          "Resolves when any of the promises resolves",
+          "Resolves when all promises resolve",
+          "Rejects all promises",
+          "Creates a new promise",
+        ],
+        correctAnswer: 1,
+      },
+      {
+        question: "Which keyword must be used with 'await'?",
+        options: ["function", "async", "static", "promise"],
+        correctAnswer: 1,
+      },
+    ],
   }
 
-  // Current section
-  const currentSection = session.sections[activeSection]
+  // Current section data
+  const currentSectionData = session.sections[currentSection]
+
+  // Convert HTML to Markdown for the renderer
+  const turndownService = new TurndownService({
+    headingStyle: "atx", // Use # for headers
+    codeBlockStyle: "fenced", // Use \`\`\` for code blocks
+    bulletListMarker: "-", // Use - for lists
+  })
+
+  // Fix code blocks wrapped in <pre><code>
+  turndownService.addRule("fencedCodeBlock", {
+    filter: (node) =>
+      node.nodeName === "PRE" && node.firstChild !== null && (node.firstChild as HTMLElement).nodeName === "CODE", // TS-safe check
+    replacement: (content, node) => {
+      const code = node.textContent || ""
+      return `\n\n\`\`\`\n${code.trim()}\n\`\`\`\n\n`
+    },
+  })
+
+  const cleanedSectionContent = currentSectionData ? turndownService.turndown(currentSectionData.content) : ""
+
+  // Handle quiz answers
+  const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({})
+  const [quizSubmitted, setQuizSubmitted] = useState(false)
+  const [quizScore, setQuizScore] = useState(0)
+
+  const handleAnswerSelection = (questionIndex: number, answerIndex: number) => {
+    setQuizAnswers((prev) => ({
+      ...prev,
+      [questionIndex]: answerIndex,
+    }))
+  }
+
+  const handleQuizSubmit = () => {
+    // Calculate score
+    let correctCount = 0
+    session.quiz.forEach((question, index) => {
+      if (quizAnswers[index] === question.correctAnswer) {
+        correctCount++
+      }
+    })
+
+    const score = Math.round((correctCount / session.quiz.length) * 100)
+    setQuizScore(score)
+    setQuizSubmitted(true)
+
+    // If score is passing (e.g., 70% or higher), mark section as completed
+    if (score >= 70) {
+      setIsCompleted(true)
+    }
+  }
+
+  const markComplete = () => {
+    setIsCompleted(true)
+    // In a real app, you would save this completion status to your backend
+  }
+
+  // Handle next/previous section navigation
+  const handleNextSection = () => {
+    if (currentSection < session.sections.length - 1) {
+      setCurrentSection(currentSection + 1)
+      setActiveTab("content") // Reset to content tab when changing sections
+    }
+  }
+
+  const handlePreviousSection = () => {
+    if (currentSection > 0) {
+      setCurrentSection(currentSection - 1)
+      setActiveTab("content") // Reset to content tab when changing sections
+    }
+  }
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Left Sidebar - Session Structure */}
-      <div className="w-64 border-r border-border/50 h-full overflow-auto bg-muted/20">
-        <div className="p-4 border-b border-border/50">
-          <h2 className="font-display text-lg truncate">{session.title}</h2>
-          <div className="flex items-center gap-2 mt-2">
-            <Progress value={session.progress} className="h-1.5" />
-            <span className="text-xs text-muted-foreground">{session.progress}%</span>
+    <AppShell>
+      <div className="flex flex-col">
+        {/* Module header */}
+        <div className="bg-muted/20 border-b border-border/40 py-4">
+          <div className="px-4 lg:px-8 py-6 w-full">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Link href="/quick-learn" className="hover:text-foreground transition-colors">
+                  Quick Learn
+                </Link>
+                <span>/</span>
+                <span>{session.title}</span>
+              </div>
+              <h1 className="text-xl md:text-2xl font-display">{currentSectionData.title}</h1>
+              <div className="flex flex-wrap gap-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-secondary" />
+                  <span className="text-secondary">Quick Learn</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">{session.duration}</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="p-4">
-          <div className="mb-4">
-            <h3 className="font-medium text-sm mb-2">Session Content</h3>
-            <ul className="space-y-1 pl-4">
-              {session.sections.map((section, sectionIndex) => (
-                <li key={sectionIndex}>
-                  <button
-                    className={`text-xs flex items-center gap-2 w-full text-left py-1.5 px-2 rounded-md transition-colors ${
-                      activeSection === sectionIndex ? "bg-secondary/10 text-secondary" : "hover:bg-muted"
-                    }`}
-                    onClick={() => setActiveSection(sectionIndex)}
-                  >
-                    <div
-                      className={`h-4 w-4 rounded-full flex items-center justify-center ${
-                        section.completed
-                          ? "bg-secondary text-secondary-foreground"
-                          : "border border-muted-foreground/50"
-                      }`}
-                    >
-                      {section.completed && <CheckIcon className="h-2.5 w-2.5" />}
-                    </div>
-                    <span className="truncate">{section.title}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
+        {/* Progress bar for the unit */}
+        <div className="h-1 bg-muted">
+          <div
+            className="h-full bg-secondary transition-all"
+            style={{ width: `${((currentSection + 1) / session.sections.length) * 100}%` }}
+          ></div>
         </div>
-      </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
-        {/* Session Content */}
-        <div className="flex-1 overflow-auto">
-          <div className="max-w-3xl mx-auto py-8 px-6">
-            <div className="flex items-center text-sm text-muted-foreground mb-6">
-              <Link href="/dashboard" className="hover:text-foreground transition-colors">
-                Dashboard
-              </Link>
-              <ChevronRightIcon className="h-4 w-4 mx-1" />
-              <Link href="/quick-learn" className="hover:text-foreground transition-colors">
-                Quick Learn
-              </Link>
-              <ChevronRightIcon className="h-4 w-4 mx-1" />
-              <span className="truncate">{session.title}</span>
+        {/* Main content */}
+        <div className="px-4 lg:px-8 py-6 w-full">
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Left sidebar with section navigation */}
+            <div className="hidden lg:block lg:w-80 shrink-0">
+              <div className="sticky top-24 space-y-4">
+                <h3 className="font-medium">Session Sections</h3>
+                <ul className="space-y-2">
+                  {session.sections.map((section, index) => (
+                    <li key={index}>
+                      <button
+                        onClick={() => setCurrentSection(index)}
+                        className={`flex items-center gap-2 py-2 px-3 rounded-md text-sm w-full text-left ${
+                          currentSection === index ? "bg-secondary/10 text-secondary font-medium" : "hover:bg-muted/50"
+                        }`}
+                      >
+                        <span className="h-5 aspect-square rounded-full bg-muted/70 flex items-center justify-center text-xs font-medium">
+                          {index + 1}
+                        </span>
+                        <span className="whitespace-normal break-words leading-snug">{section.title}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
 
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-display">{currentSection.title}</h1>
-                <Button variant="ghost" size="icon">
-                  <MoreHorizontal className="h-5 w-5" />
-                </Button>
-              </div>
+            {/* Main content area */}
+            <div className="flex-1 min-w-0 mr-12">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+                <TabsList className="ml-8 w-full max-w-lg px-1 py-5 bg-card border border-border rounded-full mb-6 z-10 relative shadow-sm flex gap-1">
+                  <TabsTrigger
+                    value="content"
+                    className="flex-1 px-10 py-4 text-base font-medium rounded-full transition-all
+                      text-muted-foreground hover:text-foreground
+                      [data-state='active']:text-white
+                      [data-state='active']:bg-secondary/60
+                      [data-state='active']:shadow
+                      [data-state='active']:glow-text-pink"
+                  >
+                    Content
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="quiz"
+                    className="flex-1 px-7 py-4 text-base font-medium rounded-full transition-all
+                      text-muted-foreground hover:text-foreground
+                      [data-state='active']:text-white
+                      [data-state='active']:bg-secondary/60
+                      [data-state='active']:shadow
+                      [data-state='active']:glow-text-pink"
+                  >
+                    Quiz
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="resources"
+                    className="flex-1 px-7 py-4 text-base font-medium rounded-full transition-all
+                      text-muted-foreground hover:text-foreground
+                      [data-state='active']:text-white
+                      [data-state='active']:bg-secondary/60
+                      [data-state='active']:shadow
+                      [data-state='active']:glow-text-pink"
+                  >
+                    Resources
+                  </TabsTrigger>
+                </TabsList>
 
-              <div
-                className="prose prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ __html: currentSection.content || "<p>Content not available</p>" }}
-              />
+                <TabsContent value="content" className="animate-in fade-in-50 duration-300">
+                  <div className="w-full ml-8">
+                    <div className="prose prose-invert max-w-none mb-8">
+                      <MarkdownRenderer content={cleanedSectionContent} />
+                    </div>
 
-              <div className="bg-muted/30 rounded-lg p-4 border border-border/50">
-                <h3 className="font-medium mb-2">Quick Check</h3>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <p className="text-sm">What is the primary purpose of Promises in JavaScript?</p>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <input type="radio" id="q1a" name="q1" className="h-4 w-4 text-secondary" />
-                        <label htmlFor="q1a" className="text-sm">
-                          To make code run faster
-                        </label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <input type="radio" id="q1b" name="q1" className="h-4 w-4 text-secondary" />
-                        <label htmlFor="q1b" className="text-sm">
-                          To handle asynchronous operations
-                        </label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <input type="radio" id="q1c" name="q1" className="h-4 w-4 text-secondary" />
-                        <label htmlFor="q1c" className="text-sm">
-                          To create global variables
-                        </label>
-                      </div>
+                    <div className="flex justify-between pt-4 border-t border-border/40">
+                      {currentSection > 0 ? (
+                        <Button variant="outline" onClick={handlePreviousSection}>
+                          <ArrowLeft className="mr-2 h-4 w-4" />
+                          Previous Section
+                        </Button>
+                      ) : (
+                        <Button variant="outline" disabled>
+                          <ArrowLeft className="mr-2 h-4 w-4" />
+                          Previous Section
+                        </Button>
+                      )}
+
+                      {isCompleted ? (
+                        <Button variant="outline" className="gap-2 text-green-500 border-green-500/20">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Completed
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={markComplete}
+                          className="gap-2 glow-button-pink bg-secondary hover:bg-secondary/90"
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                          Mark as Complete
+                        </Button>
+                      )}
+
+                      {currentSection < session.sections.length - 1 ? (
+                        <Button
+                          className="glow-button-pink bg-secondary hover:bg-secondary/90"
+                          onClick={handleNextSection}
+                        >
+                          Next Section
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <Button className="glow-button-pink bg-secondary hover:bg-secondary/90">
+                          Complete Session
+                          <CheckCircle2 className="ml-2 h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
+                </TabsContent>
 
-                  <Button className="w-full">Check Answer</Button>
-                </div>
-              </div>
+                <TabsContent value="quiz" className="animate-in fade-in-50 duration-300">
+                  <div className="w-full pl-2 lg:pl-4 space-y-8">
+                    <div className="bg-muted/20 p-6 rounded-lg border border-border/40">
+                      <h2 className="text-xl font-medium mb-4">Knowledge Check</h2>
+                      <p className="mb-6 text-muted-foreground">
+                        Test your understanding of the section content with these questions.
+                      </p>
 
-              <div className="flex items-center justify-between pt-4">
-                <Button variant="outline" className="gap-2" disabled={activeSection === 0}>
-                  <ChevronLeft className="h-4 w-4" />
-                  Previous Section
-                </Button>
-                <div className="flex gap-2">
-                  <Button variant="outline" className="gap-2">
-                    <BookOpen className="h-4 w-4" />
-                    Add to Flashcards
-                  </Button>
-                  <Button variant="outline" className="gap-2">
-                    <FileText className="h-4 w-4" />
-                    Add to Quiz
-                  </Button>
-                </div>
-                <Button className="gap-2 glow-button" disabled={activeSection === session.sections.length - 1}>
-                  Next Section
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
+                      <div className="space-y-8">
+                        {session.quiz.map((question, qIndex) => (
+                          <div key={qIndex} className="space-y-4">
+                            <h3 className="font-medium">
+                              {qIndex + 1}. {question.question}
+                            </h3>
+                            <div className="space-y-2">
+                              {question.options.map((option, oIndex) => (
+                                <div
+                                  key={oIndex}
+                                  className={`
+                                  flex items-center p-3 rounded-md border border-border/40
+                                  ${!quizSubmitted && quizAnswers[qIndex] === oIndex ? "bg-secondary/10 border-secondary/50" : ""}
+                                  ${quizAnswers[qIndex] === oIndex ? "bg-secondary/10 border-secondary/50" : ""}
+                                  ${
+                                    quizSubmitted && oIndex === question.correctAnswer
+                                      ? "bg-green-500/10 border-green-500/50"
+                                      : ""
+                                  }
+                                  ${
+                                    quizSubmitted && quizAnswers[qIndex] === oIndex && oIndex !== question.correctAnswer
+                                      ? "bg-red-500/10 border-red-500/50"
+                                      : ""
+                                  }
+                                  ${quizSubmitted ? "pointer-events-none" : "cursor-pointer hover:bg-muted/30"}
+                                `}
+                                  onClick={() => !quizSubmitted && handleAnswerSelection(qIndex, oIndex)}
+                                >
+                                  <div
+                                    className={`
+                                    h-5 w-5 rounded-full mr-3 flex items-center justify-center border
+                                    ${
+                                      !quizSubmitted && quizAnswers[qIndex] === oIndex
+                                        ? "border-secondary bg-secondary/20"
+                                        : "border-muted-foreground"
+                                    }
+                                    ${
+                                      quizSubmitted && oIndex === question.correctAnswer
+                                        ? "border-green-500 bg-green-500/20"
+                                        : ""
+                                    }
+                                    ${
+                                      quizSubmitted &&
+                                      quizAnswers[qIndex] === oIndex &&
+                                      oIndex !== question.correctAnswer
+                                        ? "border-red-500 bg-red-500/20"
+                                        : ""
+                                    }
+                                  `}
+                                  >
+                                    {(!quizSubmitted && quizAnswers[qIndex] === oIndex) ||
+                                    (quizSubmitted && oIndex === question.correctAnswer) ? (
+                                      <div
+                                        className={`h-2 w-2 rounded-full 
+                                        ${quizSubmitted ? "bg-green-500" : "bg-secondary"}`}
+                                      />
+                                    ) : null}
+                                  </div>
+                                  <span>{option}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {quizSubmitted ? (
+                        <div className="mt-8 p-4 rounded-md bg-muted/30 text-center">
+                          <h3 className="text-xl font-medium mb-2">Your Score: {quizScore}%</h3>
+                          <p className="mb-4 text-muted-foreground">
+                            {quizScore >= 70
+                              ? "Great job! You've passed the quiz."
+                              : "Review the material and try again to improve your score."}
+                          </p>
+                          <Button
+                            onClick={() => {
+                              setQuizAnswers({})
+                              setQuizSubmitted(false)
+                              setQuizScore(0)
+                            }}
+                            className="glow-button-pink bg-secondary hover:bg-secondary/90"
+                          >
+                            Retry Quiz
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          className="mt-8 w-full glow-button-pink bg-secondary hover:bg-secondary/90"
+                          onClick={handleQuizSubmit}
+                          disabled={Object.keys(quizAnswers).length < session.quiz.length}
+                        >
+                          Submit Answers
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="resources" className="animate-in fade-in-50 duration-300">
+                  <div className="w-full pl-2 lg:pl-4">
+                    <h2 className="text-xl font-medium mb-6">Additional Resources</h2>
+
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {session.resources.map((resource, index) => (
+                        <a
+                          key={index}
+                          href={resource.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block group"
+                        >
+                          <Card className="h-full border-border/50 hover:border-secondary/60 transition-all group-hover:shadow-md card-hover">
+                            <CardContent className="p-4 flex flex-col h-full">
+                              <div className="h-10 w-10 rounded-full bg-secondary/10 flex items-center justify-center mb-3">
+                                {resource.type === "documentation" ? (
+                                  <FileText className="h-5 w-5 text-secondary" />
+                                ) : resource.type === "guide" ? (
+                                  <BookOpen className="h-5 w-5 text-secondary" />
+                                ) : (
+                                  <Lightbulb className="h-5 w-5 text-secondary" />
+                                )}
+                              </div>
+                              <h3 className="font-medium mb-2 group-hover:text-secondary transition-colors">
+                                {resource.title}
+                              </h3>
+                              <p className="text-xs text-muted-foreground mb-2">
+                                External Resource - {resource.type.charAt(0).toUpperCase() + resource.type.slice(1)}
+                              </p>
+                            </CardContent>
+                          </Card>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Right Sidebar - Session Tools */}
-      <div className="w-64 border-l border-border/50 h-full overflow-auto bg-muted/20">
-        <div className="p-4 border-b border-border/50">
-          <h3 className="font-medium text-sm">Session Progress</h3>
-          <div className="mt-2 space-y-2">
-            <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Completed</span>
+        {/* Mobile navigation footer */}
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border/40 p-4">
+          <Button variant="outline" size="sm" className="w-full flex items-center justify-between" asChild>
+            <Link href="/quick-learn">
+              <List className="h-4 w-4" />
+              <span>View All Sections</span>
               <span>
-                {session.completedSections}/{session.totalSections} sections
+                {currentSection + 1}/{session.sections.length}
               </span>
-            </div>
-            <Progress value={(session.completedSections / session.totalSections) * 100} className="h-1.5" />
-            <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Estimated time</span>
-              <span>{session.estimatedTime}</span>
-            </div>
-            <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Last accessed</span>
-              <span>{session.lastAccessed}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-4">
-          <Tabs defaultValue="flashcards">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="flashcards">Flashcards</TabsTrigger>
-              <TabsTrigger value="quiz">Quiz</TabsTrigger>
-            </TabsList>
-            <TabsContent value="flashcards" className="mt-4 space-y-4">
-              <div className="text-center text-sm text-muted-foreground">
-                <Lightbulb className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
-                <p>Add important concepts to your flashcard set for this session.</p>
-              </div>
-              <Button variant="outline" className="w-full gap-2">
-                <Plus className="h-4 w-4" />
-                Create Flashcard Set
-              </Button>
-            </TabsContent>
-            <TabsContent value="quiz" className="mt-4 space-y-4">
-              <div className="text-center text-sm text-muted-foreground">
-                <FileText className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
-                <p>Add questions to your cumulative quiz for this session.</p>
-              </div>
-              <Button variant="outline" className="w-full gap-2">
-                <Play className="h-4 w-4" />
-                Start Practice Quiz
-              </Button>
-            </TabsContent>
-          </Tabs>
-
-          <Separator className="my-6" />
-
-          <div className="space-y-4">
-            <h3 className="font-medium text-sm">Related Resources</h3>
-            <div className="space-y-2">
-              {[
-                { title: "MDN Promise Documentation", icon: <FileText className="h-4 w-4 text-muted-foreground" /> },
-                { title: "Async JS Practice Exercises", icon: <BookOpen className="h-4 w-4 text-muted-foreground" /> },
-                { title: "Video: Promises Explained", icon: <Play className="h-4 w-4 text-muted-foreground" /> },
-              ].map((resource, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 text-sm p-2 hover:bg-muted rounded-md cursor-pointer"
-                >
-                  {resource.icon}
-                  <span>{resource.title}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+            </Link>
+          </Button>
         </div>
       </div>
-    </div>
-  )
-}
-
-function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  )
-}
-
-function ChevronRightIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m9 18 6-6-6-6" />
-    </svg>
+    </AppShell>
   )
 }

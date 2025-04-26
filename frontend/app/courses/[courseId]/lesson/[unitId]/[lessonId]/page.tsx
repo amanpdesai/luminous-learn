@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { AppShell } from "@/components/layout/app-shell"
 import { Button } from "@/components/ui/button"
@@ -8,21 +8,70 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, FileText, Lightbulb, List, Video } from "lucide-react"
 import { useParams } from "next/navigation"
+import { MarkdownRenderer } from "@/components/ui/markdown-render"
+import TurndownService from "turndown"
 
 export default function ModulePage() {
   const params = useParams()
-  const { courseId, unitId, lessonId} = params
+  const { courseId, unitId, lessonId } = params
   const [isCompleted, setIsCompleted] = useState(false)
   const [activeTab, setActiveTab] = useState("content")
 
-  // Mock data for the lesson
+  const [lessons, setLessons] = useState([
+    {
+      id: 1,
+      title: "Installing Python and Setting Up the Development Environment",
+      type: "lesson",
+      duration: "15 min",
+      status: "in progress",
+    },
+    {
+      id: 2,
+      title: "Installing Python and Understanding the Interpreter",
+      type: "video",
+      duration: "20 min",
+      status: "not started",
+    },
+    {
+      id: 3,
+      title: "Python Installation and Environment Setup Quiz",
+      type: "quiz",
+      duration: "10 min",
+      status: "not started",
+    },
+    {
+      id: 4,
+      title: "Write Your First Python Script",
+      type: "lesson",
+      duration: "30 min",
+      status: "not started",
+    },
+    {
+      id: 5,
+      title: "Video Lecture: Learn Python - Full Course for Beginners",
+      type: "video",
+      duration: "45 min",
+      status: "not started",
+    },
+  ])
+
+  const currentLesson = lessons.find((l) => l.id === Number.parseInt(lessonId as string))
+
   const lesson = {
-    id: params.lessonId,
-    title: "Installing Python and Setting Up the Development Environment",
-    type: "lesson",
-    duration: "15 min",
-    content: `
-      <h2>Installing Python and Setting Up the Development Environment</h2>
+    id: lessonId,
+    title: currentLesson?.title || "Lesson",
+    type: currentLesson?.type || "lesson",
+    duration: currentLesson?.duration || "15 min",
+    course: {
+      id: courseId,
+      title: "Introduction to Python Programming",
+    },
+    unit: {
+      id: unitId,
+      title: "Getting Started with Python",
+      lessons,
+    },
+    content: `<h2>Installing Python and Setting Up the Development Environment</h2>
       <p>Before you can start writing Python code, you need to set up your development environment. This lesson will guide you through installing Python and setting up a code editor.</p>
 
       <h3>Step 1: Download Python</h3>
@@ -88,8 +137,7 @@ sudo pacman -S python         # For Arch Linux</code></pre>
       <p>Save the file and run it to see your first Python program in action!</p>
 
       <h3>Conclusion</h3>
-      <p>Now that you have Python installed and a code editor set up, you're ready to start writing Python code. In the next lesson, we'll explore basic Python syntax and write our first program.</p>
-    `,
+      <p>Now that you have Python installed and a code editor set up, you're ready to start writing Python code. In the next lesson, we'll explore basic Python syntax and write our first program.</p>`, // Keep your long HTML lesson content here
     video: {
       url: "https://www.youtube.com/embed/YYXdXT2l-Gg",
       title: "Python Tutorial: Installing Python & PyCharm",
@@ -133,58 +181,28 @@ sudo pacman -S python         # For Arch Linux</code></pre>
         correctAnswer: 1,
       },
     ],
-    course: {
-      id: params.courseId,
-      title: "Introduction to Python Programming",
-    },
-    unit: {
-      id: params.unitId,
-      title: "Getting Started with Python",
-      progress: 20,
-      lessons: [
-        {
-          id: 1,
-          title: "Installing Python and Setting Up the Development Environment",
-          type: "lesson",
-          duration: "15 min",
-          status: "in progress",
-        },
-        {
-          id: 2,
-          title: "Installing Python and Understanding the Interpreter",
-          type: "video",
-          duration: "20 min",
-          status: "not started",
-        },
-        {
-          id: 3,
-          title: "Python Installation and Environment Setup Quiz",
-          type: "quiz",
-          duration: "10 min",
-          status: "not started",
-        },
-        {
-          id: 4,
-          title: "Write Your First Python Script",
-          type: "lesson",
-          duration: "30 min",
-          status: "not started",
-        },
-        {
-          id: 5,
-          title: "Video Lecture: Learn Python - Full Course for Beginners",
-          type: "video",
-          duration: "45 min",
-          status: "not started",
-        },
-      ],
-    },
   }
 
-  // Logic for handling quiz submissions
   const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({})
   const [quizSubmitted, setQuizSubmitted] = useState(false)
   const [quizScore, setQuizScore] = useState(0)
+
+  const turndownService = new TurndownService({
+    headingStyle: "atx",
+    codeBlockStyle: "fenced",
+    bulletListMarker: "-",
+  })
+
+  turndownService.addRule("fencedCodeBlock", {
+    filter: (node) =>
+      node.nodeName === "PRE" && node.firstChild !== null && (node.firstChild as HTMLElement).nodeName === "CODE",
+    replacement: (content, node) => {
+      const code = node.textContent || ""
+      return `\n\n\`\`\`\n${code.trim()}\n\`\`\`\n\n`
+    },
+  })
+
+  const cleanedLessonContent = turndownService.turndown(lesson.content)
 
   const handleAnswerSelection = (questionIndex: number, answerIndex: number) => {
     setQuizAnswers((prev) => ({
@@ -194,7 +212,6 @@ sudo pacman -S python         # For Arch Linux</code></pre>
   }
 
   const handleQuizSubmit = () => {
-    // Calculate score
     let correctCount = 0
     lesson.quiz.forEach((question, index) => {
       if (quizAnswers[index] === question.correctAnswer) {
@@ -206,22 +223,29 @@ sudo pacman -S python         # For Arch Linux</code></pre>
     setQuizScore(score)
     setQuizSubmitted(true)
 
-    // If score is passing (e.g., 70% or higher), mark lesson as completed
     if (score >= 70) {
-      setIsCompleted(true)
+      markComplete()
     }
   }
 
   const markComplete = () => {
     setIsCompleted(true)
-    // In a real app, you would save this completion status to your backend
+    const currentLessonIndex = lessons.findIndex((l) => l.id === Number.parseInt(lessonId as string))
+    if (currentLessonIndex !== -1) {
+      const updatedLessons = [...lessons]
+      updatedLessons[currentLessonIndex] = {
+        ...updatedLessons[currentLessonIndex],
+        status: "completed",
+      }
+      setLessons(updatedLessons)
+    }
   }
 
-  // Handle next/previous lesson navigation
-  const currentModuleIndex = lesson.unit.lessons.findIndex((m) => m.id === parseInt(lessonId as string))
-  const prevModule = currentModuleIndex > 0 ? lesson.unit.lessons[currentModuleIndex - 1] : null
-  const nextModule =
-    currentModuleIndex < lesson.unit.lessons.length - 1 ? lesson.unit.lessons[currentModuleIndex + 1] : null
+  const currentModuleIndex = lessons.findIndex((m) => m.id === Number.parseInt(lessonId as string))
+  const prevModule = currentModuleIndex > 0 ? lessons[currentModuleIndex - 1] : null
+  const nextModule = currentModuleIndex < lessons.length - 1 ? lessons[currentModuleIndex + 1] : null
+
+  const totalLessons = lessons.length
 
   return (
     <AppShell>
@@ -257,31 +281,36 @@ sudo pacman -S python         # For Arch Linux</code></pre>
           </div>
         </div>
 
-        {/* Progress bar for the unit */}
+        {/* Progress bar for the unit - using exact same implementation as QuickLearn */}
         <div className="h-1 bg-muted">
-          <div className="h-full bg-primary transition-all" style={{ width: `${lesson.unit.progress}%` }}></div>
+          <div
+            className="h-full bg-primary transition-all"
+            style={{ width: `${((currentModuleIndex + 1) / totalLessons) * 100}%` }}
+          />
         </div>
 
         {/* Main content */}
         <div className="px-4 lg:px-8 py-6 w-full">
           <div className="flex flex-col lg:flex-row gap-6">
             {/* Left sidebar with lesson navigation */}
-            <div className="hidden lg:block lg:w-64 shrink-0">
+            <div className="hidden lg:block lg:w-80 shrink-0">
               <div className="sticky top-24 space-y-4">
                 <h3 className="font-medium">Unit Lessons</h3>
-                <ul className="space-y-1">
+                <ul className="space-y-2">
                   {lesson.unit.lessons.map((m, index) => (
                     <li key={index}>
                       <Link
                         href={`/courses/${params.courseId}/lesson/${params.unitId}/${m.id}`}
                         className={`flex items-center gap-2 py-2 px-3 rounded-md text-sm ${
-                          m.id === parseInt(lessonId as string) ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted/50"
+                          m.id === Number.parseInt(lessonId as string)
+                            ? "bg-primary/10 text-primary font-medium"
+                            : "hover:bg-muted/50"
                         }`}
                       >
-                        <span className="h-5 w-5 rounded-full bg-muted/70 flex items-center justify-center text-xs">
+                        <span className="h-5 aspect-square rounded-full bg-muted/70 flex items-center justify-center text-xs font-medium">
                           {index + 1}
                         </span>
-                        <span className="truncate">{m.title}</span>
+                        <span className="whitespace-normal break-words leading-snug">{m.title}</span>
                       </Link>
                     </li>
                   ))}
@@ -290,36 +319,39 @@ sudo pacman -S python         # For Arch Linux</code></pre>
             </div>
 
             {/* Main content area */}
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 mr-12">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                <TabsList className="ml-8 w-full max-w-md pl-2 lg:pl-4 bg-muted p-1 rounded-lg border border-border flex gap-1">
+                <TabsList className="ml-8 w-full max-w-lg px-1 py-5 bg-card border border-border rounded-full mb-6 z-10 relative shadow-sm flex gap-1">
                   <TabsTrigger
                     value="content"
-                    className="flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors
-                      bg-transparent text-muted-foreground
-                      [data-state=active]:bg-background
-                      [data-state=active]:text-foreground
-                      [data-state=active]:shadow"
+                    className="flex-1 px-10 py-4 text-base font-medium rounded-full transition-all
+                      text-muted-foreground hover:text-foreground
+                      [data-state='active']:text-white
+                      [data-state='active']:bg-primary/60
+                      [data-state='active']:shadow
+                      [data-state='active']:glow-text"
                   >
                     {lesson.type === "video" ? "Video" : "Content"}
                   </TabsTrigger>
                   <TabsTrigger
                     value="quiz"
-                    className="flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors
-                      bg-transparent text-muted-foreground
-                      [data-state=active]:bg-background
-                      [data-state=active]:text-foreground
-                      [data-state=active]:shadow"
+                    className="flex-1 px-7 py-4 text-base font-medium rounded-full transition-all
+                      text-muted-foreground hover:text-foreground
+                      [data-state='active']:text-white
+                      [data-state='active']:bg-primary/60
+                      [data-state='active']:shadow
+                      [data-state='active']:glow-text"
                   >
                     Quiz
                   </TabsTrigger>
                   <TabsTrigger
                     value="resources"
-                    className="flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors
-                      bg-transparent text-muted-foreground
-                      [data-state=active]:bg-background
-                      [data-state=active]:text-foreground
-                      [data-state=active]:shadow"
+                    className="flex-1 px-7 py-4 text-base font-medium rounded-full transition-all
+                      text-muted-foreground hover:text-foreground
+                      [data-state='active']:text-white
+                      [data-state='active']:bg-primary/60
+                      [data-state='active']:shadow
+                      [data-state='active']:glow-text"
                   >
                     Resources
                   </TabsTrigger>
@@ -339,7 +371,7 @@ sudo pacman -S python         # For Arch Linux</code></pre>
                       </div>
                     ) : (
                       <div className="prose prose-invert max-w-none mb-8">
-                        <div dangerouslySetInnerHTML={{ __html: lesson.content }} />
+                        <MarkdownRenderer content={cleanedLessonContent} />
                       </div>
                     )}
 
