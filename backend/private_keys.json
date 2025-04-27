@@ -1,0 +1,18 @@
+{
+    "syllabus_agent": {
+        "identity_key": "0d7cdf5a7ad4b435c9027b983389122d4a23968f7d01c06408199eb52e88526c",
+        "wallet_key": "UBYXUWhuOepGu7EwC6OzupMkyxAli+pFKGPym3h0Poc="
+    },
+    "quick_learn_agent": {
+        "identity_key": "d42b59a28284a5d12c610fa1d3fecf2783ef75a2bd704ae923f3671dfaddbe9c",
+        "wallet_key": "mEK3CobZbNnlTL6t/1v2XeM+rfIBiw/uPtESaDkGWBM="
+    },
+    "syllabus_client": {
+        "identity_key": "348a3171e34d2c232c4a4a2842e08737075666cbb6336c011b2a0aee42c71dae",
+        "wallet_key": "aic4Ik0HygLa5iI5EvdTShb8Xjy/2JsoRyo/f9Sh+Vg="
+    },
+    "course_content_agent": {
+        "identity_key": "bdd666fe6f6ac87c06bd2921bb0a24fb3a90f65a5c9c8dda9e078235749b037a",
+        "wallet_key": "YqFMwiWBpok9EGSjG1s4ldQUlzA6Ot99/Hzwt05ba4g="
+    }
+}
