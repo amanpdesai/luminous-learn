@@ -1,0 +1,23 @@
+ERROR:    [network]: Query failed with error: _InactiveRpcError.
+ERROR:    [network]: Failed to query contract version. Contract interactions will be disabled.
+ERROR:    [network]: Query failed with error: _InactiveRpcError.
+ERROR:    [network]: Failed to query contract version. Contract interactions will be disabled.
+ERROR:    [network]: Query failed with error: _InactiveRpcError.
+ERROR:    [network]: Failed to query contract version. Contract interactions will be disabled.
+<frozen runpy>:128: RuntimeWarning: 'agents.syllabus_agent' found in sys.modules after import of package 'agents', but prior to execution of 'agents.syllabus_agent'; this may result in unpredictable behaviour
+ERROR:    [network]: Query failed with error: _InactiveRpcError.
+ERROR:    [network]: Failed to query contract version. Contract interactions will be disabled.
+[SyllabusAgent] starting on http://localhost:8010 ...
+INFO:     [syllabus_agent]: Starting agent with address: agent1q2j0qxpsmnum5gxnw80gjf8xnncctynj66d0rx6zm9xm67sqexfk5g7wye4
+INFO:     [syllabus_agent]: Starting agent with address: agent1q2j0qxpsmnum5gxnw80gjf8xnncctynj66d0rx6zm9xm67sqexfk5g7wye4
+INFO:     [syllabus_agent]: Agent inspector available at https://agentverse.ai/inspect/?uri=http%3A//127.0.0.1%3A8010&address=agent1q2j0qxpsmnum5gxnw80gjf8xnncctynj66d0rx6zm9xm67sqexfk5g7wye4
+INFO:     [syllabus_agent]: Agent inspector available at https://agentverse.ai/inspect/?uri=http%3A//127.0.0.1%3A8010&address=agent1q2j0qxpsmnum5gxnw80gjf8xnncctynj66d0rx6zm9xm67sqexfk5g7wye4
+INFO:     [syllabus_agent]: Starting server on http://0.0.0.0:8010 (Press CTRL+C to quit)
+INFO:     [syllabus_agent]: Starting server on http://0.0.0.0:8010 (Press CTRL+C to quit)
+INFO:     [uagents.registration]: Registration on Almanac API successful
+INFO:     [uagents.registration]: No Ledger available. Skipping registration on Almanac contract.
+INFO:     [syllabus_agent]: [REST] syllabus for into to real analysis/Intermediate
+INFO:     [syllabus_agent]: [REST] syllabus for into to real analysis/Intermediate
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC remote call 1 is done.

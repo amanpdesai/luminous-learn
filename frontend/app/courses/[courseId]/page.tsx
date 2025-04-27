@@ -248,7 +248,7 @@ export default function CoursePage() {
                     {course.level}
                   </Button>
                   <h1 className="text-2xl md:text-3xl font-display glow-text mb-2">{course.title}</h1>
-                  <p className="text-muted-foreground max-w-3xl">{course.description}</p>
+                  <p className="text-muted-foreground max-w-4xl">{course.description}</p>
                 </div>
 
                 <div className="flex flex-col gap-2 md:items-end">
@@ -292,9 +292,9 @@ export default function CoursePage() {
                 <span>
                   {course.units.length} units • {course.units.reduce((acc, unit) => acc + (unit.lesson_outline?.length || 0), 0)} lessons
                 </span>
-                <span>{course.unit_lessons?.filter(lesson => lesson.status === "completed").length || 0} completed</span>
+                <span>{course.completed} completed</span>
               </div>
-              <Progress value={course.progress} className="h-2 mb-6" />
+              <Progress value={progressPercentage} className="h-2 mb-6" />
             </div>
 
             <div className="space-y-4">
