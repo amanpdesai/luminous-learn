@@ -90,7 +90,7 @@ export default function TestViewPage() {
 
       const token = session.access_token
 
-      const res = await fetch(`https://luminous-learn.onrender.com/api/flashcards/${params.type}/${params.id}`, {
+      const res = await fetch(`http://localhost:8080/api/flashcards/${params.type}/${params.id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -275,7 +275,7 @@ export default function TestViewPage() {
       }, {} as Record<string, { correct: number; incorrect: number }>)
   
       for (const [cardId, counts] of Object.entries(cardUpdates)) {
-        await fetch(`https://luminous-learn.onrender.com/api/flashcards/update_card_progress/${params.type}/${params.id}/${cardId}`, {
+        await fetch(`http://localhost:8080/api/flashcards/update_card_progress/${params.type}/${params.id}/${cardId}`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -286,7 +286,7 @@ export default function TestViewPage() {
       }
   
       // Update the flashcard set's last_test_score
-      await fetch(`https://luminous-learn.onrender.com/api/flashcards/update_flashcard_set_progress/${params.type}/${params.id}`, {
+      await fetch(`http://localhost:8080/api/flashcards/update_flashcard_set_progress/${params.type}/${params.id}`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

@@ -78,7 +78,7 @@ export default function CoursesPage() {
       }
     
       try {
-        const response = await fetch("https://luminous-learn.onrender.com/api/get_user_courses", {
+        const response = await fetch("http://localhost:8080/api/get_user_courses", {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${token}`,
@@ -169,7 +169,7 @@ export default function CoursesPage() {
         throw new Error("You must be logged in to delete a course");
       }
       
-      const response = await fetch(`https://luminous-learn.onrender.com/api/delete_course/${courseId}`, {
+      const response = await fetch(`http://localhost:8080/api/delete_course/${courseId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,

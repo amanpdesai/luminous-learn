@@ -113,7 +113,7 @@ export default function CoursePage() {
       }
   
       try {
-        const response = await fetch(`https://luminous-learn.onrender.com/api/get_user_course?course_id=${params.courseId}`, {
+        const response = await fetch(`http://localhost:8080/api/get_user_course?course_id=${params.courseId}`, {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${token}`,

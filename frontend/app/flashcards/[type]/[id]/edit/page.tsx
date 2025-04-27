@@ -127,7 +127,7 @@ export default function EditFlashcardsPage() {
       const token = session.access_token
   
       try {
-        const res = await fetch(`https://luminous-learn.onrender.com/api/flashcards/${params.type}/${params.id}`, {
+        const res = await fetch(`http://localhost:8080/api/flashcards/${params.type}/${params.id}`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         const { flashcard_set } = await res.json()  // <- extract flashcard_set
@@ -195,7 +195,7 @@ export default function EditFlashcardsPage() {
         flashcards,
       }
   
-      await fetch(`https://luminous-learn.onrender.com/api/flashcards/update_set/${params.type}/${params.id}`, {
+      await fetch(`http://localhost:8080/api/flashcards/update_set/${params.type}/${params.id}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

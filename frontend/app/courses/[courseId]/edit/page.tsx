@@ -80,7 +80,7 @@ export default function CourseOutlineEditor() {
       const token = session.access_token
   
       try {
-        const response = await fetch(`https://luminous-learn.onrender.com/api/get_user_course?course_id=${courseId}`, {
+        const response = await fetch(`http://localhost:8080/api/get_user_course?course_id=${courseId}`, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -212,7 +212,7 @@ export default function CourseOutlineEditor() {
           completed: 0, // <-- this is the key addition
         }
     
-        const response = await fetch("https://luminous-learn.onrender.com/api/save_draft", {
+        const response = await fetch("http://localhost:8080/api/save_draft", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -270,7 +270,7 @@ export default function CourseOutlineEditor() {
         }
     
         // Step 1: Generate the course with the full content
-        const response = await fetch("https://luminous-learn.onrender.com/api/generate_course", {
+        const response = await fetch("http://localhost:8080/api/generate_course", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -288,7 +288,7 @@ export default function CourseOutlineEditor() {
         
         // Step 2: Delete the draft course since we've now published it
         console.log(`Deleting draft course: ${courseId}`)
-        const deleteResponse = await fetch(`https://luminous-learn.onrender.com/api/delete_course/${courseId}`, {
+        const deleteResponse = await fetch(`http://localhost:8080/api/delete_course/${courseId}`, {
           method: "DELETE",
           headers: {
             Authorization: `Bearer ${token}`,

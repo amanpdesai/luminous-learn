@@ -56,7 +56,7 @@ export default function CreateQuickLearnPage() {
       const token = session.access_token
       
       // Call the API to generate quick learn content
-      const response = await fetch('https://luminous-learn.onrender.com/api/generate_quick_learn', {
+      const response = await fetch('http://localhost:8080/api/generate_quick_learn', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

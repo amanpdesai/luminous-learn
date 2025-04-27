@@ -57,7 +57,7 @@ export default function FlashcardSetPage() {
 
         const token = session.access_token
 
-        const url = `https://luminous-learn.onrender.com/api/flashcards/${params.type}/${params.id}`
+        const url = `http://localhost:8080/api/flashcards/${params.type}/${params.id}`
         console.log("Fetching flashcards:", url)
 
         const res = await fetch(url, {

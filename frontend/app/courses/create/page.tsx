@@ -46,7 +46,7 @@ export default function CreateCoursePage() {
 
   const simulateLLMCall = async (topic: string, difficulty: string, depth: string) => {
     try {
-      const apiCall = fetch("https://luminous-learn.onrender.com/api/generate_syllabus", {
+      const apiCall = fetch("http://localhost:8080/api/generate_syllabus", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topic, difficulty, depth }),

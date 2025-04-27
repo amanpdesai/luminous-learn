@@ -91,7 +91,7 @@ export default function QuickLearnPage() {
     
         const token = session.access_token
     
-        const response = await fetch(`https://luminous-learn.onrender.com/api/quick_learn/${id}`, {
+        const response = await fetch(`http://localhost:8080/api/quick_learn/${id}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
