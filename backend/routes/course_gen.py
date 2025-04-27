@@ -17,7 +17,6 @@ def generate_syllabus():
     topic = data.get('topic')
     difficulty = data.get('difficulty')
     depth = data.get('depth', 'comprehensive')
-
     # Call syllabus agent instead of direct function
     agent_response = requests.post(
         "http://localhost:8010/generate_syllabus",
@@ -43,7 +42,17 @@ def generate_syllabus():
     if not syllabus_json_str:
         # Fallback: maybe the agent already returned the syllabus dict directly
         syllabus_json_str = json.dumps(syllabus_payload)
-
+#     # Call syllabus agent instead of direct function
+#     agent_response = requests.post(
+#         "http://localhost:8010/generate_syllabus",
+#         json={"topic": topic, "difficulty": difficulty, "depth": depth},
+#         headers={"Content-Type": "application/json"}
+#     )
+    
+#     if agent_response.status_code != 200:
+#         return jsonify({"error": f"Agent service error: {agent_response.text}"}), 500
+        
+#     syllabus_json_str = agent_response.json()["json_text"]
     return Response(syllabus_json_str, status=200, mimetype='application/json')
 
 @course_gen_bp.route("/generate_course", methods=["POST", "OPTIONS"])

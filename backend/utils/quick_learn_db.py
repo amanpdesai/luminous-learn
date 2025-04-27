@@ -3,6 +3,25 @@ import datetime
 import json
 from typing import Dict, Any, Tuple, Union
 
+def make_json_serializable(obj):
+    # If obj is a list or tuple, process recursively
+    if isinstance(obj, (list, tuple)):
+        return [make_json_serializable(item) for item in obj]
+    # If obj is a dict, process values recursively
+    elif isinstance(obj, dict):
+        return {k: make_json_serializable(v) for k, v in obj.items()}
+    # If obj has a .dict() or .to_dict() method, use it
+    elif hasattr(obj, "dict") and callable(getattr(obj, "dict")):
+        return make_json_serializable(obj.dict())
+    elif hasattr(obj, "to_dict") and callable(getattr(obj, "to_dict")):
+        return make_json_serializable(obj.to_dict())
+    # If obj is a custom object, fallback to vars()
+    elif hasattr(obj, "__dict__"):
+        return make_json_serializable(vars(obj))
+    # Otherwise, return as is (should be JSON serializable)
+    else:
+        return obj
+
 def save_quick_learn(quick_learn_data: dict, token: str) -> Union[Dict[str, Any], Tuple[Dict[str, Any], int]]:
     """Create and save a new quick learn session into Supabase."""
     user_id = verify_token_and_get_user_id(token)
@@ -17,11 +36,14 @@ def save_quick_learn(quick_learn_data: dict, token: str) -> Union[Dict[str, Any]
     quick_learn_data["last_accessed"] = now
     quick_learn_data["completed"] = quick_learn_data.get("completed", 0)  # Initialize to 0 if missing
 
+    # Ensure everything is JSON serializable (especially additional_resources)
+    serializable_data = make_json_serializable(quick_learn_data)
+
     # Print for debugging
-    print(f"[DEBUG] Inserting quick learn: {json.dumps(quick_learn_data, default=str)[:500]}...")
+    print(f"[DEBUG] Inserting quick learn: {json.dumps(serializable_data, default=str)}...")
 
     try:
-        result = supabase.table("quick_learns").insert(quick_learn_data).execute()
+        result = supabase.table("quick_learns").insert(serializable_data).execute()
         return result.data
     except Exception as e:
         import traceback

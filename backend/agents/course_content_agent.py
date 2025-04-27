@@ -32,11 +32,11 @@ async def _handle(ctx: Context, msg: FullCourseRequest):
 @course_content_agent.on_rest_post(
     "/generate_full_course", FullCourseRequest, FullCourseResponse
 )
+
 async def rest_full(ctx: Context, req: FullCourseRequest):
     ctx.logger.info("[REST] full course")
     result = generate_full_course(req.syllabus_json)
     return {"course_json": result}
-
 
 if __name__ == "__main__":
     print("[CourseContentAgent] starting on http://localhost:8012 ...")

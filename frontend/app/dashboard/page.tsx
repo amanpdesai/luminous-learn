@@ -22,12 +22,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { supabase } from "@/lib/supabaseClient"
 import { backendUrl } from "@/lib/backendUrl"
 
+type Lesson = {
+  lesson: string
+}
+
+type Unit = {
+  lesson_outline: Lesson[]
+}
+
 type CourseType = {
   id: string
   title: string
   completed: number
   lessons: number
   last_accessed: string
+  is_draft: boolean
+  units: Unit[]
 }
 
 type QuickLearnType = {
@@ -123,7 +133,7 @@ export default function DashboardPage() {
     return <DashboardLoading />
   }
   
-
+  console.log(courses)
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -239,32 +249,48 @@ function LoadingCards() {
 }
 
 function CourseCard({ course }: { course: CourseType }) {
+  console.log(course.title)
+  const isDraft = course.is_draft
+  const cleanTitle = isDraft ? course.title.replace(/^DRAFT:\s*/, "") : course.title
+  const totalLessons = course.units.reduce((sum, unit) => sum + (unit.lesson_outline?.length || 0), 0)
+  console.log(course.completed)
+
   return (
     <Card className="border-border/50 card-hover group">
       <CardHeader className="pb-3">
-        <div className="flex items-center gap-2 text-xs text-primary mb-1.5">
-          <BookOpen className="h-3.5 w-3.5" />
-          <span>Course</span>
-        </div>
+        {isDraft ? (
+          <span className="text-[10px] uppercase text-yellow-500 font-semibold tracking-widest mb-1 block">
+            Draft
+          </span>
+        ) : (
+          <div className="flex items-center gap-2 text-xs text-primary mb-1.5">
+            <BookOpen className="h-3.5 w-3.5" />
+            <span>Course</span>
+          </div>
+        )}
         <CardTitle className="text-lg group-hover:text-primary transition-colors line-clamp-1">
-          {course.title}
+          {cleanTitle}
         </CardTitle>
-        <CardDescription className="mt-1.5">
-          Flashcard set for course material
-        </CardDescription>
+        {!isDraft && (
+          <CardDescription className="mt-1.5">
+            Flashcard set for course material
+          </CardDescription>
+        )}
       </CardHeader>
       <CardContent className="pb-3 space-y-4">
-        <div className="space-y-2">
-          <div className="flex justify-between text-xs">
-            <span>Progress</span>
-            <span className="text-primary font-medium">{course.completed || 0}%</span>
+        {!isDraft && (
+          <div className="space-y-2">
+            <div className="flex justify-between text-xs">
+              <span>Progress</span>
+              <span className="text-primary font-medium">{(course.completed / totalLessons)*100 || 0}%</span>
+            </div>
+            <Progress value={(course.completed / totalLessons)*100 || 0} className="h-2" />
           </div>
-          <Progress value={course.completed || 0} className="h-2" />
-        </div>
+        )}
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div className="flex items-center gap-1.5">
             <BookOpen className="h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">{course.lessons || 0} lessons</span>
+            <span className="text-muted-foreground">{totalLessons || 0} lessons</span>
           </div>
           <div className="flex items-center gap-1.5 justify-end">
             <Clock className="h-4 w-4 text-muted-foreground" />
@@ -275,8 +301,10 @@ function CourseCard({ course }: { course: CourseType }) {
         </div>
       </CardContent>
       <CardFooter className="pt-3">
-        <Button className="glow-button w-full" asChild>
-          <Link href={`/courses/${course.id}`}>Continue</Link>
+        <Button className={isDraft ? "w-full" : "glow-button w-full"} variant={isDraft ? "outline" : "default"} asChild>
+          <Link href={isDraft ? `/courses/${course.id}/edit` : `/courses/${course.id}`}>
+            {isDraft ? "Edit Outline" : "Continue"}
+          </Link>
         </Button>
       </CardFooter>
     </Card>
@@ -320,7 +348,7 @@ function QuickLearnCard({ session }: { session: QuickLearnType }) {
         </div>
       </CardContent>
       <CardFooter className="pt-3">
-        <Button className="glow-button-pink w-full" asChild>
+        <Button variant={"secondary"} className="glow-button-pink w-full" asChild>
           <Link href={`/quick-learn/${session.id}`}>Continue</Link>
         </Button>
       </CardFooter>

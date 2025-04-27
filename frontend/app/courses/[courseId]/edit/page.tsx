@@ -213,7 +213,7 @@ export default function CourseOutlineEditor() {
           completed: 0, // <-- this is the key addition
         }
     
-        const response = await fetch(`${backendUrl}/api/save_draft`, {
+        const response = await fetch(`${backendUrl}/api/update_draft`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

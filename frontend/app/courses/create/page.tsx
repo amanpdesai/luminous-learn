@@ -132,7 +132,7 @@ export default function CreateCoursePage() {
         </div>
 
         <Card className="border-border/50">
-          <CardContent className="p-6 sm:p-8">
+          <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-1">
                 <Label htmlFor="topic" className="text-base">What would you like to learn?</Label>

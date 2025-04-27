@@ -135,12 +135,24 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, vid
         components={{
           code: CodeBlock,
           p: ({ node, children, ...props }) => {
-            if (containsBlockElement(node)) return <>{children}</>
+            if (containsPre(node)) {
+              return <>{children}</>; // Don't wrap in <p> if inside a <pre>
+            }
+          
+            // NEW: Check if paragraph ONLY contains a code element
+            if (
+              node?.children?.length === 1 &&
+              (node.children[0] as Element)?.tagName === "code"
+            ) {
+              return <>{children}</>; // Directly render code without <p> wrapper
+            }
+          
+            // Otherwise normal paragraph
             return (
               <p className="mb-4 whitespace-pre-wrap" {...props}>
                 {children}
               </p>
-            )
+            );
           },
           h1: ({ children }) => <h1 className="text-2xl font-bold mt-6 mb-3">{children}</h1>,
           h2: ({ children }) => <h2 className="text-xl font-bold mt-5 mb-2">{children}</h2>,
