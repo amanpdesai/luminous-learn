@@ -13,6 +13,7 @@ import { Progress } from "@/components/ui/progress"
 import { AppShell } from "@/components/layout/app-shell"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { supabase } from "@/lib/supabaseClient"
+import { backendUrl } from "@/lib/backendUrl"
 
 type Course = {
   id: string
@@ -78,7 +79,7 @@ export default function CoursesPage() {
       }
     
       try {
-        const response = await fetch("https://luminous-learn.onrender.com/api/get_user_courses", {
+        const response = await fetch(`${backendUrl}/api/get_user_courses`, {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${token}`,
@@ -169,7 +170,7 @@ export default function CoursesPage() {
         throw new Error("You must be logged in to delete a course");
       }
       
-      const response = await fetch(`https://luminous-learn.onrender.com/api/delete_course/${courseId}`, {
+      const response = await fetch(`${backendUrl}/api/delete_course/${courseId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,

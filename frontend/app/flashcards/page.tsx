@@ -33,44 +33,55 @@ export default function FlashcardsPage() {
           return
         }
         const token = session.access_token
-  
+    
         setLoadingCourses(true)
         const resCourses = await fetch("https://luminous-learn.onrender.com/api/flashcard_sets?type=course", {
           headers: { Authorization: `Bearer ${token}` },
         })
-        let courseSetsData: FlashcardSet[] = await resCourses.json()
-        console.log('Course API response:', courseSetsData)
+        const rawCourseSetsData = await resCourses.json()
         
-        // Ensure we're only setting course type flashcards
-        courseSetsData = (courseSetsData || []).filter((set): set is FlashcardSet => set.source_type === 'course').map((set) => ({
-          ...set,
-          flashcards: set.flashcards ?? []
-        }))        
-        console.log('Filtered course sets:', courseSetsData)
+        const courseSetsData: FlashcardSet[] = (rawCourseSetsData || []).map((set: unknown) => {
+          if (typeof set !== 'object' || set === null) {
+            throw new Error('Invalid flashcard set received from backend (course)')
+          }
+          const safeSet = set as { [key: string]: unknown }
+          return {
+            ...safeSet,
+            flashcards: Array.isArray((safeSet.flashcards)) 
+              ? safeSet.flashcards 
+              : (safeSet.flashcards as { flashcards?: unknown[] })?.flashcards ?? [],
+          } as FlashcardSet
+        })
         setCourseSets(courseSetsData)
-  
+        console.log('Filtered course sets:', courseSetsData)
+    
         setLoadingQuickLearns(true)
         const resQuickLearns = await fetch("https://luminous-learn.onrender.com/api/flashcard_sets?type=quick-learn", {
           headers: { Authorization: `Bearer ${token}` },
         })
-        let quickLearnSetsData: FlashcardSet[] = await resQuickLearns.json()
-        console.log('Quick Learn API response:', quickLearnSetsData)
+        const rawQuickLearnSetsData = await resQuickLearns.json()
         
-        // Ensure we're only setting quick-learn type flashcards
-        quickLearnSetsData = (quickLearnSetsData || []).filter((set): set is FlashcardSet => set.source_type === 'quick-learn').map((set) => ({
-          ...set,
-          flashcards: set.flashcards ?? []
-        }))        
-        console.log('Filtered quick-learn sets:', quickLearnSetsData)
+        const quickLearnSetsData: FlashcardSet[] = (rawQuickLearnSetsData || []).map((set: unknown) => {
+          if (typeof set !== 'object' || set === null) {
+            throw new Error('Invalid flashcard set received from backend (quick-learn)')
+          }
+          const safeSet = set as { [key: string]: unknown }
+          return {
+            ...safeSet,
+            flashcards: Array.isArray((safeSet.flashcards)) 
+              ? safeSet.flashcards 
+              : (safeSet.flashcards as { flashcards?: unknown[] })?.flashcards ?? [],
+          } as FlashcardSet
+        })
         setQuickLearnSets(quickLearnSetsData)
-  
+    
       } catch (error) {
         console.error("Error fetching flashcard sets:", error)
       } finally {
         setLoadingCourses(false)
         setLoadingQuickLearns(false)
       }
-    }
+    }    
   
     fetchFlashcardSets()
   }, [router])  

@@ -23,6 +23,7 @@ import { Separator } from "@/components/ui/separator"
 import { AppShell } from "@/components/layout/app-shell"
 import { useParams, useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabaseClient"
+import { backendUrl } from "@/lib/backendUrl"
 
 // Outline lesson (from units.lesson_outline)
 type LessonOutline = {
@@ -113,7 +114,7 @@ export default function CoursePage() {
       }
   
       try {
-        const response = await fetch(`https://luminous-learn.onrender.com/api/get_user_course?course_id=${params.courseId}`, {
+        const response = await fetch(`${backendUrl}/api/get_user_course?course_id=${params.courseId}`, {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${token}`,

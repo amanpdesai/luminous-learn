@@ -13,6 +13,7 @@ import { PlusIcon, TrashIcon, Loader2Icon, Sparkles, CheckIcon } from "lucide-re
 import Link from "next/link"
 import { Label } from "@radix-ui/react-label"
 import { useParams } from "next/navigation"
+import { backendUrl } from "@/lib/backendUrl"
 
 interface Lesson {
   lesson: string
@@ -80,7 +81,7 @@ export default function CourseOutlineEditor() {
       const token = session.access_token
   
       try {
-        const response = await fetch(`https://luminous-learn.onrender.com/api/get_user_course?course_id=${courseId}`, {
+        const response = await fetch(`${backendUrl}/api/get_user_course?course_id=${courseId}`, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -212,7 +213,7 @@ export default function CourseOutlineEditor() {
           completed: 0, // <-- this is the key addition
         }
     
-        const response = await fetch("https://luminous-learn.onrender.com/api/save_draft", {
+        const response = await fetch(`${backendUrl}/api/save_draft`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -270,7 +271,7 @@ export default function CourseOutlineEditor() {
         }
     
         // Step 1: Generate the course with the full content
-        const response = await fetch("https://luminous-learn.onrender.com/api/generate_course", {
+        const response = await fetch(`${backendUrl}/api/generate_course`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -288,7 +289,7 @@ export default function CourseOutlineEditor() {
         
         // Step 2: Delete the draft course since we've now published it
         console.log(`Deleting draft course: ${courseId}`)
-        const deleteResponse = await fetch(`https://luminous-learn.onrender.com/api/delete_course/${courseId}`, {
+        const deleteResponse = await fetch(`${backendUrl}/api/delete_course/${courseId}`, {
           method: "DELETE",
           headers: {
             Authorization: `Bearer ${token}`,

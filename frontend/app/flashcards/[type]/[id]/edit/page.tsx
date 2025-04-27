@@ -25,6 +25,7 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { supabase } from "@/lib/supabaseClient"
+import { backendUrl } from "@/lib/backendUrl"
 
 function SortableCard({
   id,
@@ -127,7 +128,7 @@ export default function EditFlashcardsPage() {
       const token = session.access_token
   
       try {
-        const res = await fetch(`https://luminous-learn.onrender.com/api/flashcards/${params.type}/${params.id}`, {
+        const res = await fetch(`${backendUrl}/api/flashcards/${params.type}/${params.id}`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         const { flashcard_set } = await res.json()  // <- extract flashcard_set
@@ -195,7 +196,7 @@ export default function EditFlashcardsPage() {
         flashcards,
       }
   
-      await fetch(`https://luminous-learn.onrender.com/api/flashcards/update_set/${params.type}/${params.id}`, {
+      await fetch(`${backendUrl}/api/flashcards/update_set/${params.type}/${params.id}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

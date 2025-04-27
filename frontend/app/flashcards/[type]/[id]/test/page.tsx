@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { ArrowLeft, Check, Clock, Sparkles, X } from "lucide-react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabaseClient"
+import { backendUrl } from "@/lib/backendUrl"
 
 type QuestionType = "multiple-choice" | "written" | "true-false"
 
@@ -90,7 +91,7 @@ export default function TestViewPage() {
 
       const token = session.access_token
 
-      const res = await fetch(`https://luminous-learn.onrender.com/api/flashcards/${params.type}/${params.id}`, {
+      const res = await fetch(`${backendUrl}/api/flashcards/${params.type}/${params.id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -275,7 +276,7 @@ export default function TestViewPage() {
       }, {} as Record<string, { correct: number; incorrect: number }>)
   
       for (const [cardId, counts] of Object.entries(cardUpdates)) {
-        await fetch(`https://luminous-learn.onrender.com/api/flashcards/update_card_progress/${params.type}/${params.id}/${cardId}`, {
+        await fetch(`${backendUrl}/api/flashcards/update_card_progress/${params.type}/${params.id}/${cardId}`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -286,7 +287,7 @@ export default function TestViewPage() {
       }
   
       // Update the flashcard set's last_test_score
-      await fetch(`https://luminous-learn.onrender.com/api/flashcards/update_flashcard_set_progress/${params.type}/${params.id}`, {
+      await fetch(`${backendUrl}/api/flashcards/update_flashcard_set_progress/${params.type}/${params.id}`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

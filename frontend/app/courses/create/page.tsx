@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { AppShell } from "@/components/layout/app-shell"
 import { supabase } from "@/lib/supabaseClient"
 import Link from "next/link"
+import { backendUrl } from "@/lib/backendUrl"
 
 export default function CreateCoursePage() {
   const [pageLoading, isPageLoading] = useState(true)
@@ -46,7 +47,7 @@ export default function CreateCoursePage() {
 
   const simulateLLMCall = async (topic: string, difficulty: string, depth: string) => {
     try {
-      const apiCall = fetch("https://luminous-learn.onrender.com/api/generate_syllabus", {
+      const apiCall = fetch(`${backendUrl}/api/generate_syllabus`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topic, difficulty, depth }),

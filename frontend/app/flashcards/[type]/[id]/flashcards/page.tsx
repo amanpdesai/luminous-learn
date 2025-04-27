@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch"
 import { ArrowLeft, ArrowRight, RotateCcw, Shuffle, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabaseClient"
+import { backendUrl } from "@/lib/backendUrl"
 
 // Types
 interface Flashcard {
@@ -61,7 +62,7 @@ export default function FlashcardsViewPage() {
       const token = session.access_token
   
       try {
-        const res = await fetch(`https://luminous-learn.onrender.com/api/flashcards/${params.type}/${params.id}`, {
+        const res = await fetch(`${backendUrl}/api/flashcards/${params.type}/${params.id}`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         const data: FetchFlashcardSetResponse = await res.json()

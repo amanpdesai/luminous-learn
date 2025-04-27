@@ -20,6 +20,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { supabase } from "@/lib/supabaseClient"
+import { backendUrl } from "@/lib/backendUrl"
 
 type CourseType = {
   id: string
@@ -80,7 +81,7 @@ export default function DashboardPage() {
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) return
         const token = session.access_token
-        const res = await fetch("https://luminous-learn.onrender.com/api/get_user_courses", {
+        const res = await fetch(`${backendUrl}/api/get_user_courses`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         const data = await res.json()
@@ -98,7 +99,7 @@ export default function DashboardPage() {
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) return
         const token = session.access_token
-        const res = await fetch("https://luminous-learn.onrender.com/api/quick_learns", {
+        const res = await fetch(`${backendUrl}/api/quick_learns`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         const data = await res.json()

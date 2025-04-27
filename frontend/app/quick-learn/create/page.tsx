@@ -13,6 +13,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { supabase } from "@/lib/supabaseClient"
+import { backendUrl } from "@/lib/backendUrl"
 
 export default function CreateQuickLearnPage() {
   const [pageLoading, setPageLoading] = useState(true)
@@ -56,7 +57,7 @@ export default function CreateQuickLearnPage() {
       const token = session.access_token
       
       // Call the API to generate quick learn content
-      const response = await fetch('https://luminous-learn.onrender.com/api/generate_quick_learn', {
+      const response = await fetch(`${backendUrl}/api/generate_quick_learn`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
