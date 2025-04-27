@@ -7,7 +7,7 @@ import { AppShell } from "@/components/layout/app-shell"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, ArrowRight, BookOpen, Check, CheckCircle2, Clock, FileText, Lightbulb, Sparkles, Zap } from "lucide-react"
+import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, Clock, FileText, Lightbulb, Sparkles, Zap } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { MarkdownRenderer } from "@/components/ui/markdown-render"
 import TurndownService from "turndown"
@@ -17,14 +17,11 @@ import { backendUrl } from "@/lib/backendUrl"
 // --- Types ---
 interface QuickLearnSection {
   id: string;
-  status: string;
   title: string;
-  content: string;
-  videos?: string[];
-<!--   readings: string;
+  readings: string;
   examples: string;
-  additional_resources: QuickLearnResource[]; -->
-        
+  videos?: string[];
+  additional_resources: QuickLearnResource[];
 }
 
 interface QuickLearnQuestion {
@@ -51,7 +48,7 @@ interface QuickLearnData {
   topic: string;
   difficulty: string;
   sections: QuickLearnSection[];
-  completed: number;  // ✅ Add this
+  completed: number;
   assessment?: QuickLearnAssessment;
   resources?: QuickLearnResource[];
   createdAt?: string;
@@ -65,7 +62,7 @@ export default function QuickLearnPage() {
   const params = useParams()
   const router = useRouter()
   const { id } = params as { id: string }
-  const [currentSection, setCurrentSection] = useState<number>(0)
+  const [currentSection, setCurrentSection] = useState(0)
   const [isCompleted, setIsCompleted] = useState(false)
   const [activeTab, setActiveTab] = useState("content")
   const [session, setSession] = useState<QuickLearnData | null>(null)
@@ -130,13 +127,6 @@ export default function QuickLearnPage() {
           userId: data.user_id,
           estimated_duration_minutes: data.estimated_duration_minutes
         })
-
-        const firstIncompleteIndex = (data.sections || []).findIndex((section: any) => section.status !== "completed")
-        if (firstIncompleteIndex !== -1) {
-          setCurrentSection(firstIncompleteIndex)
-        } else {
-          setCurrentSection(0)  // fallback if all are completed
-        }
       } catch (err) {
         console.error('Error fetching quick learn:', err)
       }
@@ -166,7 +156,6 @@ export default function QuickLearnPage() {
     },
   })
 
-
   const handleAnswerSelection = (questionIndex: number, answerIndex: number) => {
     setQuizAnswers((prev) => ({
       ...prev,
@@ -193,50 +182,9 @@ export default function QuickLearnPage() {
     markComplete()
   }
 
-  const markComplete = async () => {
-    if (isCompleted || !session) return;
-    try {
-      const sesh = await supabase.auth.getSession();
-      const token = sesh.data.session?.access_token;
-      const user = sesh.data.session?.user;
-      if (!user || !token) throw new Error("Not logged in");
-  
-      // Clone the unit_lessons array
-      const updatedData = session.sections.map((section) => {
-        if (section.id === session.sections[currentSection].id) {
-          // Update the matching lesson's status
-          return { ...section, status: "completed" };
-        }
-        return section;
-      });
-  
-      const courseData = {
-        unit_lessons: updatedData,
-      };
-  
-      const response = await fetch(`${backendUrl}/api/update_quick_learn/${session.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(courseData),
-      });
-  
-      if (!response.ok) throw new Error("Failed to update lesson");
-
-      session.sections[currentSection].status = "completed";
-  
-      // Optional: Update local course state if needed
-      // setCourse(prev => prev ? { ...prev, unit_lessons: updatedLessons } : null);
-  
-      console.log("Lesson marked as completed!");
-      setIsCompleted(true);
-    } catch (err) {
-      console.error("Error marking lesson as complete:", err);
-      alert("Failed to update lesson. Please try again.");
-    }
-  };
+  const markComplete = () => {
+    setIsCompleted(true)
+  }
 
   const handleNextSection = () => {
     if (currentSection < sections.length - 1) {
@@ -267,14 +215,14 @@ export default function QuickLearnPage() {
         <div className="bg-muted/20 border-b border-border/40 py-4">
           <div className="px-4 lg:px-8 py-6 w-full">
             <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Link href="/quick-learn" className="hover:text-foreground transition-colors">
                   Quick Learn
                 </Link>
                 <span>/</span>
                 <span>{session?.title}</span>
               </div>
-              <h1 className="text-xl md:text-2xl font-display mb-3">{currentSectionData?.title || 'Loading...'}</h1>
+              <h1 className="text-xl md:text-2xl font-display">{currentSectionData?.title || 'Loading...'}</h1>
               <div className="flex flex-wrap gap-3 text-sm">
                 <div className="flex items-center gap-2">
                   <Zap className="h-4 w-4 text-secondary" />
@@ -314,7 +262,7 @@ export default function QuickLearnPage() {
                         }`}
                       >
                         <span className="h-5 aspect-square rounded-full flex items-center justify-center text-xs font-medium bg-muted/70">
-                          {section.status === "completed" ? <Check className="h-4 w-4 text-green-400" /> : <>{index + 1}</>}
+                          {index + 1}
                         </span>
                         <span className="whitespace-normal break-words leading-snug">{section.title}</span>
                       </button>
@@ -339,343 +287,239 @@ export default function QuickLearnPage() {
 
             {/* Main content area */}
             <div className="flex-1 min-w-0 mr-12">
-              {currentSection == sections.length ? 
-              <div className="w-full pl-2 lg:pl-4 space-y-8">
-              <div className="bg-muted/20 p-6 rounded-lg border border-border/40">
-                <h2 className="text-xl font-medium mb-4">Knowledge Check</h2>
-                <p className="mb-6 text-muted-foreground">
-                  Test your understanding of the section content with these questions.
-                </p>
-
-                <div className="space-y-8">
-                  {session.assessment?.questions?.map((question, qIndex) => (
-                    <div key={qIndex} className="space-y-4">
-                      <h3 className="font-medium">
-                        {qIndex + 1}. {question.question}
-                      </h3>
-                      <div className="space-y-2">
-                        {question.options.map((option, oIndex) => (
-                          <div
-                            key={oIndex}
-                            className={`
-                              flex items-center p-3 rounded-md border border-border/40
-                              ${!quizSubmitted && quizAnswers[qIndex] === oIndex ? "bg-secondary/10 border-secondary/50" : ""}
-                              ${quizAnswers[qIndex] === oIndex ? "bg-secondary/10 border-secondary/50" : ""}
-                              ${
-                                quizSubmitted && oIndex === question.correctAnswer
-                                  ? "bg-green-500/10 border-green-500/50"
-                                  : ""
-                              }
-                              ${
-                                quizSubmitted && quizAnswers[qIndex] === oIndex && oIndex !== question.correctAnswer
-                                  ? "bg-red-500/10 border-red-500/50"
-                                  : ""
-                              }
-                              ${quizSubmitted ? "pointer-events-none" : "cursor-pointer hover:bg-muted/30"}
-                            `}
-                            onClick={() => !quizSubmitted && handleAnswerSelection(qIndex, oIndex)}
-                          >
-                            <div
-                              className={`
-                                h-5 w-5 rounded-full mr-3 flex items-center justify-center border
-                                ${
-                                  !quizSubmitted && quizAnswers[qIndex] === oIndex
-                                    ? "border-secondary bg-secondary/20"
-                                    : "border-muted-foreground"
-                                }
-                                ${
-                                  quizSubmitted && oIndex === question.correctAnswer
-                                    ? "border-green-500 bg-green-500/20"
-                                    : ""
-                                }
-                                ${
-                                  quizSubmitted &&
-                                  quizAnswers[qIndex] === oIndex &&
-                                  oIndex !== question.correctAnswer
-                                    ? "border-red-500 bg-red-500/20"
-                                    : ""
-                                }
-                              `}
-                            >
-                              {(!quizSubmitted && quizAnswers[qIndex] === oIndex) ||
-                                (quizSubmitted && oIndex === question.correctAnswer) ? (
-                                <div
-                                  className={`h-2 w-2 rounded-full 
-                                    ${quizSubmitted ? "bg-green-500" : "bg-secondary"}`}
-                                />
-                              ) : null}
-                            </div>
-                            <span>{option}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {quizSubmitted ? (
-                  <div className="mt-8 p-4 rounded-md bg-muted/30 text-center">
-                    <h3 className="text-xl font-medium mb-2">Your Score: {quizScore}%</h3>
-                    <p className="mb-4 text-muted-foreground">
-                      {"Great job on completing the quiz!"}
+              {currentSection == sections.length ? (
+                <div className="w-full pl-2 lg:pl-4 space-y-8">
+                  <div className="bg-muted/20 p-6 rounded-lg border border-border/40">
+                    <h2 className="text-xl font-medium mb-4">Knowledge Check</h2>
+                    <p className="mb-6 text-muted-foreground">
+                      Test your understanding of the section content with these questions.
                     </p>
-                    <Button
-                      onClick={() => {
-                        setQuizAnswers({})
-                        setQuizSubmitted(false)
-                        setQuizScore(0)
-                      }}
-                      className="glow-button-pink bg-secondary hover:bg-secondary/90"
-                    >
-                      Retry Quiz
-                    </Button>
+
+                    <div className="space-y-8">
+                      {session.assessment?.questions?.map((question, qIndex) => (
+                        <div key={qIndex} className="space-y-4">
+                          <h3 className="font-medium">
+                            {qIndex + 1}. {question.question}
+                          </h3>
+                          <div className="space-y-2">
+                            {question.options.map((option, oIndex) => (
+                              <div
+                                key={oIndex}
+                                className={`
+                                  flex items-center p-3 rounded-md border border-border/40
+                                  ${!quizSubmitted && quizAnswers[qIndex] === oIndex ? "bg-secondary/10 border-secondary/50" : ""}
+                                  ${quizAnswers[qIndex] === oIndex ? "bg-secondary/10 border-secondary/50" : ""}
+                                  ${
+                                    quizSubmitted && oIndex === question.correctAnswer
+                                      ? "bg-green-500/10 border-green-500/50"
+                                      : ""
+                                  }
+                                  ${
+                                    quizSubmitted && quizAnswers[qIndex] === oIndex && oIndex !== question.correctAnswer
+                                      ? "bg-red-500/10 border-red-500/50"
+                                      : ""
+                                  }
+                                  ${quizSubmitted ? "pointer-events-none" : "cursor-pointer hover:bg-muted/30"}
+                                `}
+                                onClick={() => !quizSubmitted && handleAnswerSelection(qIndex, oIndex)}
+                              >
+                                <div
+                                  className={`
+                                    h-5 w-5 rounded-full mr-3 flex items-center justify-center border
+                                    ${
+                                      !quizSubmitted && quizAnswers[qIndex] === oIndex
+                                        ? "border-secondary bg-secondary/20"
+                                        : "border-muted-foreground"
+                                    }
+                                    ${
+                                      quizSubmitted && oIndex === question.correctAnswer
+                                        ? "border-green-500 bg-green-500/20"
+                                        : ""
+                                    }
+                                    ${
+                                      quizSubmitted &&
+                                      quizAnswers[qIndex] === oIndex &&
+                                      oIndex !== question.correctAnswer
+                                        ? "border-red-500 bg-red-500/20"
+                                        : ""
+                                    }
+                                  `}
+                                >
+                                  {(!quizSubmitted && quizAnswers[qIndex] === oIndex) ||
+                                    (quizSubmitted && oIndex === question.correctAnswer) ? (
+                                    <div
+                                      className={`h-2 w-2 rounded-full 
+                                        ${quizSubmitted ? "bg-green-500" : "bg-secondary"}`}
+                                    />
+                                  ) : null}
+                                </div>
+                                <span>{option}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {quizSubmitted ? (
+                      <div className="mt-8 p-4 rounded-md bg-muted/30 text-center">
+                        <h3 className="text-xl font-medium mb-2">Your Score: {quizScore}%</h3>
+                        <p className="mb-4 text-muted-foreground">
+                          {"Great job on completing the quiz!"}
+                        </p>
+                        <Button
+                          onClick={() => {
+                            setQuizAnswers({})
+                            setQuizSubmitted(false)
+                            setQuizScore(0)
+                          }}
+                          className="glow-button-pink bg-secondary hover:bg-secondary/90"
+                        >
+                          Retry Quiz
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        className="mt-8 w-full glow-button-pink bg-secondary hover:bg-secondary/90"
+                        onClick={handleQuizSubmit}
+                      >
+                        Submit Answers
+                      </Button>
+                    )}
                   </div>
-                ) : (
-                  <Button
-                    className="mt-8 w-full glow-button-pink bg-secondary hover:bg-secondary/90"
-                    onClick={handleQuizSubmit}
-                  >
-                    Submit Answers
-                  </Button>
-                )}
-              </div>
-            </div>
-              :  
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                <TabsList className="ml-8 w-full max-w-lg px-1 py-5 bg-muted/20 border border-border rounded-full mb-6 z-10 relative shadow-sm flex gap-1">
+                </div>
+              ) : (  
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+                  <TabsList className="ml-8 w-full max-w-lg px-1 py-5 bg-card border border-border rounded-full mb-6 z-10 relative shadow-sm flex gap-1">
                     <TabsTrigger
                       value="content"
                       className="flex-1 px-10 py-4 text-base font-medium rounded-full transition-all
                         text-muted-foreground hover:text-foreground
-                        data-[state=active]:text-white
-                        data-[state=active]:bg-secondary
-                        data-[state=active]:shadow
-                        data-[state=active]:glow-text"
+                        [data-state='active']:text-white
+                        [data-state='active']:bg-secondary/60
+                        [data-state='active']:shadow
+                        [data-state='active']:glow-text-pink"
                     >
-                      Content"
+                      Content
                     </TabsTrigger>
-
                     <TabsTrigger
                       value="examples"
                       className="flex-1 px-7 py-4 text-base font-medium rounded-full transition-all
                         text-muted-foreground hover:text-foreground
-                        data-[state=active]:text-white
-                        data-[state=active]:bg-secondary
-                        data-[state=active]:shadow
-                        data-[state=active]:glow-text"
+                        [data-state='active']:text-white
+                        [data-state='active']:bg-secondary/60
+                        [data-state='active']:shadow
+                        [data-state='active']:glow-text-pink"
                     >
                       Examples
                     </TabsTrigger>
-
                     <TabsTrigger
                       value="resources"
                       className="flex-1 px-7 py-4 text-base font-medium rounded-full transition-all
                         text-muted-foreground hover:text-foreground
-                        data-[state=active]:text-white
-                        data-[state=active]:bg-secondary
-                        data-[state=active]:shadow
-                        data-[state=active]:glow-text"
+                        [data-state='active']:text-white
+                        [data-state='active']:bg-secondary/60
+                        [data-state='active']:shadow
+                        [data-state='active']:glow-text-pink"
                     >
                       Resources
                     </TabsTrigger>
                   </TabsList>
-                <TabsContent value="content" className="animate-in fade-in-50 duration-300">
-                  <div className="w-full ml-8">
-                    <div className="prose prose-invert max-w-none mb-8">
-                      <MarkdownRenderer 
-                        content={cleanedSectionContent} 
-                        videos={currentSectionData?.videos || []} 
-                      />
-                    </div>
 
-                    <div className="flex justify-between pt-4 border-t border-border/40">
-                      {currentSection > 0 ? (
-                        <Button variant="outline" onClick={handlePreviousSection}>
-                          <ArrowLeft className="mr-2 h-4 w-4" />
-                          Previous Section
-                        </Button>
-                      ) : (
-                        <Button variant="outline" disabled>
-                          <ArrowLeft className="mr-2 h-4 w-4" />
-                          Previous Section
-                        </Button>
-                      )}
-
-                      {isCompleted ? (
-                        <Button variant="outline" className="gap-2 text-green-500 border-green-500/20">
-                          <CheckCircle2 className="h-4 w-4" />
-                          Completed
-                        </Button>
-                      ) : (
-                        <Button
-                          onClick={markComplete}
-                          className="gap-2 glow-button-pink bg-secondary hover:bg-secondary/90"
-                        >
-                          <CheckCircle2 className="h-4 w-4" />
-                          Mark as Complete
-                        </Button>
-                      )}
-
-                      {currentSection < sections.length - 1 ? (
-                        <Button
-                          className="glow-button-pink bg-secondary hover:bg-secondary/90"
-                          onClick={handleNextSection}
-                        >
-                          Next Section
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </Button>
-                      ) : (
-                        <Button className="glow-button-pink bg-secondary hover:bg-secondary/90">
-                          Complete Session
-                          <CheckCircle2 className="ml-2 h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="examples" className="animate-in fade-in-50 duration-300">
-                  <div className="w-full ml-8">
-                    <div className="prose prose-invert max-w-none mb-8">
-                      <MarkdownRenderer content={currentSectionData?.examples} />
-                    </div>
-                  </div>
-                  {/*<div className="w-full pl-2 lg:pl-4 space-y-8">
-                    <div className="bg-muted/20 p-6 rounded-lg border border-border/40">
-                      <h2 className="text-xl font-medium mb-4">Knowledge Check</h2>
-                      <p className="mb-6 text-muted-foreground">
-                        Test your understanding of the section content with these questions.
-                      </p>
-
-                      <div className="space-y-8">
-                        {session.assessment?.questions?.map((question, qIndex) => (
-                          <div key={qIndex} className="space-y-4">
-                            <h3 className="font-medium">
-                              {qIndex + 1}. {question.question}
-                            </h3>
-                            <div className="space-y-2">
-                              {question.options.map((option, oIndex) => (
-                                <div
-                                  key={oIndex}
-                                  className={`
-                                    flex items-center p-3 rounded-md border border-border/40
-                                    ${!quizSubmitted && quizAnswers[qIndex] === oIndex ? "bg-secondary/10 border-secondary/50" : ""}
-                                    ${quizAnswers[qIndex] === oIndex ? "bg-secondary/10 border-secondary/50" : ""}
-                                    ${
-                                      quizSubmitted && oIndex === question.correctAnswer
-                                        ? "bg-green-500/10 border-green-500/50"
-                                        : ""
-                                    }
-                                    ${
-                                      quizSubmitted && quizAnswers[qIndex] === oIndex && oIndex !== question.correctAnswer
-                                        ? "bg-red-500/10 border-red-500/50"
-                                        : ""
-                                    }
-                                    ${quizSubmitted ? "pointer-events-none" : "cursor-pointer hover:bg-muted/30"}
-                                  `}
-                                  onClick={() => !quizSubmitted && handleAnswerSelection(qIndex, oIndex)}
-                                >
-                                  <div
-                                    className={`
-                                      h-5 w-5 rounded-full mr-3 flex items-center justify-center border
-                                      ${
-                                        !quizSubmitted && quizAnswers[qIndex] === oIndex
-                                          ? "border-secondary bg-secondary/20"
-                                          : "border-muted-foreground"
-                                      }
-                                      ${
-                                        quizSubmitted && oIndex === question.correctAnswer
-                                          ? "border-green-500 bg-green-500/20"
-                                          : ""
-                                      }
-                                      ${
-                                        quizSubmitted &&
-                                        quizAnswers[qIndex] === oIndex &&
-                                        oIndex !== question.correctAnswer
-                                          ? "border-red-500 bg-red-500/20"
-                                          : ""
-                                      }
-                                    `}
-                                  >
-                                    {(!quizSubmitted && quizAnswers[qIndex] === oIndex) ||
-                                      (quizSubmitted && oIndex === question.correctAnswer) ? (
-                                      <div
-                                        className={`h-2 w-2 rounded-full 
-                                          ${quizSubmitted ? "bg-green-500" : "bg-secondary"}`}
-                                      />
-                                    ) : null}
-                                  </div>
-                                  <span>{option}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
+                  <TabsContent value="content" className="animate-in fade-in-50 duration-300">
+                    <div className="w-full ml-8">
+                      <div className="prose prose-invert max-w-none mb-8">
+                        <MarkdownRenderer content={currentSectionData?.readings} videos={currentSectionData?.videos} />
                       </div>
 
-                      {quizSubmitted ? (
-                        <div className="mt-8 p-4 rounded-md bg-muted/30 text-center">
-                          <h3 className="text-xl font-medium mb-2">Your Score: {quizScore}%</h3>
-                          <p className="mb-4 text-muted-foreground">
-                            {"Great job on completing the quiz!"}
-                          </p>
-                          <Button
-                            onClick={() => {
-                              setQuizAnswers({})
-                              setQuizSubmitted(false)
-                              setQuizScore(0)
-                            }}
-                            className="glow-button-pink bg-secondary hover:bg-secondary/90"
-                          >
-                            Retry Quiz
+                      <div className="flex justify-between pt-4 border-t border-border/40">
+                        {currentSection > 0 ? (
+                          <Button variant="outline" onClick={handlePreviousSection}>
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            Previous Section
                           </Button>
-                        </div>
-                      ) : (
-                        <Button
-                          className="mt-8 w-full glow-button-pink bg-secondary hover:bg-secondary/90"
-                          onClick={handleQuizSubmit}
-                        >
-                          Submit Answers
-                        </Button>
-                      )}
-                    </div>
-                  </div>*/}
-                </TabsContent>
+                        ) : (
+                          <Button variant="outline" disabled>
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            Previous Section
+                          </Button>
+                        )}
 
-                {/* Resources Tab */}
-                <TabsContent value="resources" className="animate-in fade-in-50 duration-300">
-                  <div className="w-full pl-2 lg:pl-4">
-                    <h2 className="text-xl font-medium mb-6">Additional Resources</h2>
+                        {isCompleted ? (
+                          <Button variant="outline" className="gap-2 text-green-500 border-green-500/20">
+                            <CheckCircle2 className="h-4 w-4" />
+                            Completed
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={markComplete}
+                            className="gap-2 glow-button-pink bg-secondary hover:bg-secondary/90"
+                          >
+                            <CheckCircle2 className="h-4 w-4" />
+                            Mark as Complete
+                          </Button>
+                        )}
 
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {additionalResources?.map((resource: QuickLearnResource, index: number) => (
-                        <a
-                          key={index}
-                          href={resource.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block group"
-                        >
-                          <Card className="h-full border-border/50 hover:border-secondary/60 transition-all group-hover:shadow-md card-hover">
-                            <CardContent className="p-4 flex flex-col h-full">
-                              <div className="h-10 w-10 rounded-full bg-secondary/10 flex items-center justify-center mb-3">
-                                <FileText className="h-5 w-5 text-secondary" />
-                              </div>
-                              <h3 className="font-medium mb-2 group-hover:text-secondary transition-colors">
-                                {resource.text}
-                              </h3>
-                              <p className="text-xs text-muted-foreground mb-2">
-                                External Resource - Documentation
-                              </p>
-                            </CardContent>
-                          </Card>
-                        </a>
-                      ))}
+                        {currentSection < sections.length - 1 ? (
+                          <Button
+                            className="glow-button-pink bg-secondary hover:bg-secondary/90"
+                            onClick={handleNextSection}
+                          >
+                            Next Section
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button className="glow-button-pink bg-secondary hover:bg-secondary/90">
+                            Complete Session
+                            <CheckCircle2 className="ml-2 h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
-                }
+                  </TabsContent>
+
+                  <TabsContent value="examples" className="animate-in fade-in-50 duration-300">
+                    <div className="w-full ml-8">
+                      <div className="prose prose-invert max-w-none mb-8">
+                        <MarkdownRenderer content={currentSectionData?.examples} videos={currentSectionData?.videos} />
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  {/* Resources Tab */}
+                  <TabsContent value="resources" className="animate-in fade-in-50 duration-300">
+                    <div className="w-full pl-2 lg:pl-4">
+                      <h2 className="text-xl font-medium mb-6">Additional Resources</h2>
+
+                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {additionalResources?.map((resource: QuickLearnResource, index: number) => (
+                          <a
+                            key={index}
+                            href={resource.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block group"
+                          >
+                            <Card className="h-full border-border/50 hover:border-secondary/60 transition-all group-hover:shadow-md card-hover">
+                              <CardContent className="p-4 flex flex-col h-full">
+                                <div className="h-10 w-10 rounded-full bg-secondary/10 flex items-center justify-center mb-3">
+                                  <FileText className="h-5 w-5 text-secondary" />
+                                </div>
+                                <h3 className="font-medium mb-2 group-hover:text-secondary transition-colors">
+                                  {resource.text}
+                                </h3>
+                                <p className="text-xs text-muted-foreground mb-2">
+                                  External Resource - Documentation
+                                </p>
+                              </CardContent>
+                            </Card>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              )}
             </div>
           </div>
         </div>
