@@ -1,12 +1,15 @@
 import json
 import os
 import uuid
+import requests
 from typing import List, Optional, Dict, Any
 
 from dotenv import load_dotenv
 from google import genai
 from pydantic import BaseModel
 from utils.course_generation import generate_course_from_syllabus
+# from agents.image_helper import fetch_images as sync_fetch_images
+# Using YouTube agent
 
 # ---------------------------------------------------------------------------
 # 0. Gemini client is initialised ONCE here and reused by all helper methods
@@ -160,6 +163,7 @@ def generate_quick_learn(topic: str, difficulty: str) -> Dict[str, Any]:
 
     # 2️⃣  Transform Gemini structure ➜ frontend-ready structure
     sections = []
+    # enrich_images = os.getenv("ENABLE_IMAGE_ENRICH") == "true"
     for lesson, detail in zip(parsed.lessons, parsed.lesson_content):
         section_id = str(uuid.uuid4())
         blocks: List[str] = []
@@ -173,6 +177,29 @@ def generate_quick_learn(topic: str, difficulty: str) -> Dict[str, Any]:
             blocks.append("## Additional Resources\n" + "\n\n".join(detail.additional_resources))
         combined_content = "\n\n".join(blocks)
         sections.append({"id": section_id, "title": lesson.title, "content": combined_content})
+
+        # Enrich with videos if enabled
+        if os.getenv("ENABLE_VIDEO_ENRICH") == "true":
+            try:
+                print(f"[INFO] Fetching videos for quick learn section: '{lesson.title}'")
+                # Call to the YouTube agent's endpoint
+                response = requests.post(
+                    "http://localhost:8014/generate_videos",
+                    json={"query": f"{lesson.title} tutorial", "max_results": 3},
+                    headers={"Content-Type": "application/json"}
+                )
+                print(f"[INFO] Received response from YouTube agent with status code: {response.status_code}")
+                if response.status_code == 200:
+                    videos = response.json().get("videos", [])
+                    print(f"[INFO] Found {len(videos)} videos for '{lesson.title}':")
+                    for i, video in enumerate(videos):
+                        print(f"  [QUICK-LEARN] Video {i+1}: {video}")
+                    sections[-1]["videos"] = videos
+                else:
+                    print(f"[WARNING] YouTube agent request failed with status: {response.status_code}")
+                    print(f"[WARNING] Response body: {response.text[:200]}")
+            except Exception as e:
+                print(f"[WARNING] Video enrichment failed for '{lesson.title}': {str(e)}")
 
     questions = []
     for q in parsed.assessment.questions:
@@ -224,6 +251,35 @@ def generate_full_course(syllabus_json: Dict[str, Any]) -> Dict[str, Any]:
 
     try:
         full_course_dict = generate_course_from_syllabus(syllabus_json)
+        
+        # Enrich with videos if enabled
+        if os.getenv("ENABLE_VIDEO_ENRICH") == "true" and "units" in full_course_dict:
+            print(f"[INFO] Video enrichment is enabled for full course")
+            for unit in full_course_dict["units"]:
+                if "lessons" in unit:
+                    print(f"[INFO] Processing unit: {unit.get('title', 'Unknown')}")
+                    for lesson in unit["lessons"]:
+                        if "title" in lesson:
+                            lesson_title = lesson['title']
+                            try:
+                                print(f"[INFO] Fetching videos for course lesson: '{lesson_title}'")
+                                # Call to the YouTube agent's endpoint
+                                response = requests.post(
+                                    "http://localhost:8014/generate_videos",
+                                    json={"query": f"{lesson_title} tutorial", "max_results": 3},
+                                    headers={"Content-Type": "application/json"}
+                                )
+                                if response.status_code == 200:
+                                    videos = response.json().get("videos", [])
+                                    print(f"[INFO] Found {len(videos)} videos for lesson '{lesson_title}':")
+                                    for i, video in enumerate(videos):
+                                        print(f"  [FULL-COURSE] Video {i+1}: {video}")
+                                    lesson["videos"] = videos
+                                else:
+                                    print(f"[WARNING] YouTube agent request failed with status: {response.status_code}")
+                                    print(f"[WARNING] Response body: {response.text[:200]}")
+                            except Exception as e:
+                                print(f"[WARNING] Video enrichment failed for '{lesson_title}': {str(e)}")
     except Exception as exc:
         # Surface the error to the caller in a predictable structure so that
         # downstream code (and the frontend) can react accordingly.

@@ -8,6 +8,7 @@ import remarkMath from "remark-math"
 import rehypeKatex from "rehype-katex"
 import rehypeRaw from "rehype-raw"
 import rehypeHighlight from "rehype-highlight"
+import { YouTubeEmbed } from "./youtube-embed"
 import { Copy } from "lucide-react"
 import { Element } from "hast"
 
@@ -106,9 +107,15 @@ const CodeBlock: React.FC<CodeProps> = ({ inline, className, children }) => {
 
 interface MarkdownRendererProps {
   content: string
+  videos?: string[]
 }
 
-export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
+export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, videos = [] }) => {
+  // Log when the component renders with videos
+  useEffect(() => {
+    console.log('MarkdownRenderer received videos:', videos);
+  }, [videos]);
+  
   useEffect(() => {
     if (!document.getElementById('math-renderer-styles')) {
       const styleEl = document.createElement('style')
@@ -124,8 +131,9 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
   }, [])
 
   return (
-    <div className="prose prose-invert max-w-none prose-headings:font-semibold prose-a:text-blue-400 prose-img:rounded-lg prose-strong:font-bold prose-strong:text-white prose-em:italic prose-p:whitespace-pre-wrap math-content">
-      <ReactMarkdown
+    <>
+      <div className="prose prose-invert max-w-none prose-headings:font-semibold prose-a:text-blue-400 prose-img:rounded-lg prose-strong:font-bold prose-strong:text-white prose-em:italic prose-p:whitespace-pre-wrap math-content">
+        <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeRaw, rehypeHighlight, [rehypeKatex, { throwOnError: false }]]}
         components={{
@@ -160,6 +168,8 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
       >
         {content}
       </ReactMarkdown>
-    </div>
+      </div>
+      {videos && videos.length > 0 && <YouTubeEmbed videos={videos} />}
+    </>
   )
 }

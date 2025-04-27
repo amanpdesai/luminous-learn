@@ -27,8 +27,23 @@ def generate_syllabus():
     
     if agent_response.status_code != 200:
         return jsonify({"error": f"Agent service error: {agent_response.text}"}), 500
-        
-    syllabus_json_str = agent_response.json()["json_text"]
+
+    # Robustly extract the json_text field, even if agent's response body isn't valid JSON
+    try:
+        syllabus_payload = agent_response.json()
+    except ValueError:
+        try:
+            # Fallback: some servers may not send the correct Content-Type header
+            syllabus_payload = json.loads(agent_response.text or "{}")
+        except json.JSONDecodeError as e:
+            print(f"[ERROR] Failed to parse agent syllabus response as JSON: {e}\nBody: {agent_response.text[:200]}")
+            return jsonify({"error": "Invalid syllabus format returned by agent"}), 500
+
+    syllabus_json_str = syllabus_payload.get("json_text")
+    if not syllabus_json_str:
+        # Fallback: maybe the agent already returned the syllabus dict directly
+        syllabus_json_str = json.dumps(syllabus_payload)
+
     return Response(syllabus_json_str, status=200, mimetype='application/json')
 
 @course_gen_bp.route("/generate_course", methods=["POST", "OPTIONS"])

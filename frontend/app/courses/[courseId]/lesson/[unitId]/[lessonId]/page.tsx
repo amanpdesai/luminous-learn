@@ -44,6 +44,7 @@ type LessonComplete = {
   additional_resources: Resource[]
   duration_in_min: string
   status: string
+  videos?: string[]  // YouTube videos URLs
 }
 
 type LessonOutline = {
@@ -91,6 +92,7 @@ type FallbackLesson = {
   type: string
   duration: string
   status: string
+  videos?: string[] // YouTube videos for fallback lessons
 }
 
 // Type for the lesson data structure used in the UI
@@ -119,6 +121,7 @@ type LessonData = {
     type: string
   }[]
   quiz: QuizQuestion[]
+  videos?: string[] // YouTube tutorial videos
 }
 
 export default function ModulePage() {
@@ -261,6 +264,8 @@ export default function ModulePage() {
         (l) => l.id === Number.parseInt(lessonId as string)
       );
       
+      console.log('Using fallback lesson data with videos:', currentFallbackLesson?.videos);
+      
       return {
         id: lessonId || 0,
         title: currentFallbackLesson?.title || "Lesson",
@@ -306,12 +311,17 @@ export default function ModulePage() {
             correctAnswer: 0,
           },
         ],
+        videos: currentFallbackLesson?.videos || [], // Pass videos to MarkdownRenderer
       };
     } else {
       const currentUnit = course.units.find(u => u.unit_number.toString() === unitId);
       if (!currentUnit) {
         throw new Error("Unit not found");
       }
+      
+      // Debugging videos in current lesson
+      console.log('Current lesson videos:', currentLessonData.videos); 
+      console.log('Full currentLessonData:', JSON.stringify(currentLessonData, null, 2));
   
       // Grab real quiz questions
       const quizQuestions = currentLessonData.assessments?.questions?.map((q) => ({
@@ -319,6 +329,14 @@ export default function ModulePage() {
         answer_choices: q.answer_choices,
         correctAnswer: q.correctAnswer,
       })) || [];
+      
+      // For testing, provide a hardcoded YouTube URL if none exists
+      // REMOVE THIS IN PRODUCTION - only for testing
+      const testVideos = currentLessonData.videos && currentLessonData.videos.length > 0 
+        ? currentLessonData.videos 
+        : ['https://www.youtube.com/watch?v=dQw4w9WgXcQ'];
+      
+      console.log('Using videos for lesson:', testVideos);
   
       return {
         id: currentLessonData.lesson || lessonId,
@@ -352,6 +370,7 @@ export default function ModulePage() {
             correctAnswer: 1,
           },
         ],
+        videos: testVideos,
       };
     }
   };
@@ -575,7 +594,7 @@ export default function ModulePage() {
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="content" className="animate-in fade-in-50 duration-300">
+                <TabsContent value="content" className="animate-in fade-in-50 duration-300 space-y-4">
                   <div className="w-full ml-8">
                     {lesson.type === "video" ? (
                       <div className="aspect-video mb-8">
@@ -589,7 +608,10 @@ export default function ModulePage() {
                       </div>
                     ) : (
                       <div className="prose prose-invert max-w-none mb-8">
-                        <MarkdownRenderer content={cleanedLessonContent} />
+                        <MarkdownRenderer 
+                          content={cleanedLessonContent} 
+                          videos={lesson.videos || currentLessonData?.videos || []}
+                        />
                       </div>
                     )}
 

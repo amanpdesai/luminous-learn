@@ -19,6 +19,7 @@ interface QuickLearnSection {
   id: string;
   title: string;
   content: string;
+  videos?: string[];
 }
 
 interface QuickLearnQuestion {
@@ -313,7 +314,10 @@ export default function QuickLearnPage() {
                 <TabsContent value="content" className="animate-in fade-in-50 duration-300">
                   <div className="w-full ml-8">
                     <div className="prose prose-invert max-w-none mb-8">
-                      <MarkdownRenderer content={cleanedSectionContent} />
+                      <MarkdownRenderer 
+                        content={cleanedSectionContent} 
+                        videos={currentSectionData?.videos || []} 
+                      />
                     </div>
 
                     <div className="flex justify-between pt-4 border-t border-border/40">

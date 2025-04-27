@@ -31,10 +31,10 @@ async def _handle(ctx: Context, msg: GenerateQuickLearn):
 @quick_learn_agent.on_rest_post(
     "/generate_quick_learn", GenerateQuickLearn, QuickLearnResponse
 )
-async def rest_ql(ctx: Context, req: GenerateQuickLearn) -> QuickLearnResponse:
+async def rest_ql(ctx: Context, req: GenerateQuickLearn):
     ctx.logger.info("[REST] quick learn %s/%s", req.topic, req.difficulty)
     data = generate_quick_learn(req.topic, req.difficulty)
-    return QuickLearnResponse(data=data)
+    return {"data": data}
 
 
 # Entry-point
