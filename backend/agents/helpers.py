@@ -6,6 +6,7 @@ from typing import List, Optional, Dict, Any
 from dotenv import load_dotenv
 from google import genai
 from pydantic import BaseModel
+from utils.course_generation import generate_course_from_syllabus
 
 # ---------------------------------------------------------------------------
 # 0. Gemini client is initialised ONCE here and reused by all helper methods
@@ -207,17 +208,25 @@ def generate_quick_learn(topic: str, difficulty: str) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 def generate_full_course(syllabus_json: Dict[str, Any]) -> Dict[str, Any]:
-    """Return a *CourseFull*-shaped dict.  For now we simply wrap the given syllabus."""
-    # Accept both str and dict inputs
+    """Generate a *CourseFull*-shaped dict with full lesson content.
+
+    This is a thin wrapper around
+    `utils.course_generation.generate_course_from_syllabus`, providing
+    additional validation and graceful error handling so that the agent
+    always returns a serialisable dictionary ready for persistence.
+    """
+    # Accept both str and dict inputs for backward-compatibility
     if isinstance(syllabus_json, str):
         try:
             syllabus_json = json.loads(syllabus_json)
         except json.JSONDecodeError as exc:
             raise ValueError("Invalid JSON string passed into generate_full_course") from exc
 
-    if "course" in syllabus_json:
-        course_data = syllabus_json["course"]
-    else:
-        course_data = syllabus_json
+    try:
+        full_course_dict = generate_course_from_syllabus(syllabus_json)
+    except Exception as exc:
+        # Surface the error to the caller in a predictable structure so that
+        # downstream code (and the frontend) can react accordingly.
+        return {"error": f"Full course generation failed: {exc}"}
 
-    return {"course": course_data}
+    return full_course_dict

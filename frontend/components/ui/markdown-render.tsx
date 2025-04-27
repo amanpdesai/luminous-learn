@@ -34,15 +34,29 @@ const mathStyles = `
   }
 `
 
-// Typing node properly as Element from "hast"
-const containsPre = (node: unknown): boolean => {
+// Inspect HAST node tree to see if it contains **any** block-level element that
+// would be invalid as a child of <p>.  We primarily look for <pre />, but also
+// guard against <div>, <table>, lists, etc.  This prevents React from
+// rendering <p><pre/></p> or <p><div/></p> which violates the HTML spec and
+// triggers hydration warnings.
+const containsBlockElement = (node: unknown): boolean => {
   if (!node || typeof node !== "object" || !("type" in node)) return false
 
   const n = node as Element
+  // Elements that are **not** allowed inside <p>
+  const disallowed = new Set([
+    "pre",
+    "div",
+    "table",
+    "ul",
+    "ol",
+    "dl",
+    "blockquote",
+  ])
 
-  if (n.tagName === "pre") return true
+  if (disallowed.has(n.tagName)) return true
   if (Array.isArray(n.children)) {
-    return n.children.some((child) => containsPre(child))
+    return n.children.some((child) => containsBlockElement(child))
   }
   return false
 }
@@ -117,7 +131,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
         components={{
           code: CodeBlock,
           p: ({ node, children, ...props }) => {
-            if (containsPre(node)) return <>{children}</>
+            if (containsBlockElement(node)) return <>{children}</>
             return (
               <p className="mb-4 whitespace-pre-wrap" {...props}>
                 {children}
