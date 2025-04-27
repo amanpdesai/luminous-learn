@@ -22,6 +22,14 @@ COURSE_LOG="logs/agent_course.log"
 VIDEO_LOG="logs/agent_video.log"
 FLASK_LOG="logs/flask.log"
 
+# --- kill any leftovers from a previous run ---
+if [ -f logs/agent_pids.txt ]; then
+  echo "Killing previous agent PIDs..."
+  kill $(cat logs/agent_pids.txt) 2>/dev/null || true
+  rm -f logs/agent_pids.txt
+fi
+# ----------------------------------------------
+
 echo "Starting Syllabus Agent..."
 python -m agents.syllabus_agent > $SYLLABUS_LOG 2>&1 &
 SYLLABUS_PID=$!
