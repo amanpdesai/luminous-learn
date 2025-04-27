@@ -8,6 +8,7 @@ import remarkMath from "remark-math"
 import rehypeKatex from "rehype-katex"
 import rehypeRaw from "rehype-raw"
 import rehypeHighlight from "rehype-highlight"
+import { YouTubeEmbed } from "./youtube-embed"
 import { Copy } from "lucide-react"
 import { Element } from "hast"
 
@@ -34,15 +35,29 @@ const mathStyles = `
   }
 `
 
-// Typing node properly as Element from "hast"
-const containsPre = (node: unknown): boolean => {
+// Inspect HAST node tree to see if it contains **any** block-level element that
+// would be invalid as a child of <p>.  We primarily look for <pre />, but also
+// guard against <div>, <table>, lists, etc.  This prevents React from
+// rendering <p><pre/></p> or <p><div/></p> which violates the HTML spec and
+// triggers hydration warnings.
+const containsBlockElement = (node: unknown): boolean => {
   if (!node || typeof node !== "object" || !("type" in node)) return false
 
   const n = node as Element
+  // Elements that are **not** allowed inside <p>
+  const disallowed = new Set([
+    "pre",
+    "div",
+    "table",
+    "ul",
+    "ol",
+    "dl",
+    "blockquote",
+  ])
 
-  if (n.tagName === "pre") return true
+  if (disallowed.has(n.tagName)) return true
   if (Array.isArray(n.children)) {
-    return n.children.some((child) => containsPre(child))
+    return n.children.some((child) => containsBlockElement(child))
   }
   return false
 }
@@ -92,9 +107,11 @@ const CodeBlock: React.FC<CodeProps> = ({ inline, className, children }) => {
 
 interface MarkdownRendererProps {
   content: string
+  videos?: string[]
 }
 
-export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
+export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, videos = [] }) => {
+  
   useEffect(() => {
     if (!document.getElementById('math-renderer-styles')) {
       const styleEl = document.createElement('style')
@@ -110,8 +127,9 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
   }, [])
 
   return (
-    <div className="prose prose-invert max-w-none prose-headings:font-semibold prose-a:text-blue-400 prose-img:rounded-lg prose-strong:font-bold prose-strong:text-white prose-em:italic prose-p:whitespace-pre-wrap math-content">
-      <ReactMarkdown
+    <>
+      <div className="prose prose-invert max-w-none prose-headings:font-semibold prose-a:text-blue-400 prose-img:rounded-lg prose-strong:font-bold prose-strong:text-white prose-em:italic prose-p:whitespace-pre-wrap math-content">
+        <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeRaw, rehypeHighlight, [rehypeKatex, { throwOnError: false }]]}
         components={{
@@ -158,6 +176,8 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
       >
         {content}
       </ReactMarkdown>
-    </div>
+      </div>
+      {videos && videos.length > 0 && <YouTubeEmbed videos={videos} />}
+    </>
   )
 }

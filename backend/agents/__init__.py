@@ -5,6 +5,7 @@ from agents.course_content_agent import (
     FullCourseRequest,
     FullCourseResponse,
 )
+from agents.youtube_agent import video_agent, VideoRequest, VideoResponse
 
 __all__ = [
     "syllabus_agent",
@@ -16,4 +17,7 @@ __all__ = [
     "course_content_agent",
     "FullCourseRequest",
     "FullCourseResponse",
+    "video_agent",
+    "VideoRequest",
+    "VideoResponse",
 ]
