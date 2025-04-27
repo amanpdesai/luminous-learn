@@ -7,11 +7,12 @@ import { AppShell } from "@/components/layout/app-shell"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, Clock, FileText, Lightbulb, Loader2, Zap } from "lucide-react"
+import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, Clock, FileText, Lightbulb, Sparkles, Zap } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { MarkdownRenderer } from "@/components/ui/markdown-render"
 import TurndownService from "turndown"
 import { supabase } from "@/lib/supabaseClient"
+import { backendUrl } from "@/lib/backendUrl"
 
 // --- Types ---
 interface QuickLearnSection {
@@ -55,14 +56,13 @@ interface QuickLearnData {
 
 // --- Component ---
 export default function QuickLearnPage() {
+  const [pageLoading, setPageLoading] = useState(true)
   const params = useParams()
   const router = useRouter()
   const { id } = params as { id: string }
   const [currentSection, setCurrentSection] = useState(0)
   const [isCompleted, setIsCompleted] = useState(false)
   const [activeTab, setActiveTab] = useState("content")
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [session, setSession] = useState<QuickLearnData | null>(null)
   const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({})
   const [quizSubmitted, setQuizSubmitted] = useState(false)
@@ -76,10 +76,13 @@ export default function QuickLearnPage() {
   }, [currentSection])
 
   useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push("/auth")
+      }
+    }
     const fetchQuickLearn = async () => {
-      setLoading(true)
-      setError(null)
-    
       try {
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) {
@@ -89,7 +92,7 @@ export default function QuickLearnPage() {
     
         const token = session.access_token
     
-        const response = await fetch(`http://localhost:8080/api/quick_learn/${id}`, {
+        const response = await fetch(`${backendUrl}/api/quick_learn/${id}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -99,7 +102,6 @@ export default function QuickLearnPage() {
         if (!response.ok) {
           const errorData = await response.json().catch(() => null)
           console.error(`API error: ${errorData?.error || response.statusText}`)
-          setError(`Error ${response.status}: ${response.statusText}`)
           return
         }
     
@@ -107,7 +109,6 @@ export default function QuickLearnPage() {
     
         if (!data || !data.title || !data.sections) {
           console.error('Invalid data format received from server', data)
-          setError('Invalid data format received from server')
           return
         }
     
@@ -124,15 +125,14 @@ export default function QuickLearnPage() {
           userId: data.user_id,
           estimated_duration_minutes: data.estimated_duration_minutes
         })
-      } catch (err: any) {
+      } catch (err) {
         console.error('Error fetching quick learn:', err)
-        setError(err.message || 'Failed to load quick learn session')
-      } finally {
-        setLoading(false)
       }
     }    
-
-    if (id) fetchQuickLearn()
+    checkAuth()
+    Promise.all([
+      fetchQuickLearn()
+    ]).finally(() => setPageLoading(false));
   }, [id, router])
 
   const sections = session?.sections || []
@@ -164,7 +164,6 @@ export default function QuickLearnPage() {
 
   const handleQuizSubmit = () => {
     if (!session?.assessment || !session.assessment.questions.length) {
-      setError('Assessment data is not available')
       return
     }
 
@@ -200,29 +199,10 @@ export default function QuickLearnPage() {
     }
   }
 
-  if (loading) {
+  if (pageLoading || !session) {
     return (
       <AppShell>
-        <div className="flex flex-col items-center justify-center min-h-screen py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-secondary mb-4" />
-          <p className="text-muted-foreground">Loading quick learn session...</p>
-        </div>
-      </AppShell>
-    )
-  }
-
-  if (error || !session) {
-    return (
-      <AppShell>
-        <div className="flex flex-col items-center justify-center min-h-screen py-12">
-          <div className="max-w-md text-center space-y-4">
-            <h2 className="text-xl font-medium">Unable to load session</h2>
-            <p className="text-muted-foreground">{error || 'Session not found'}</p>
-            <Button onClick={() => router.push('/quick-learn')} variant="default">
-              Return to Quick Learn
-            </Button>
-          </div>
-        </div>
+        <DashboardLoading />
       </AppShell>
     )
   }
@@ -529,5 +509,21 @@ export default function QuickLearnPage() {
         </div>
       </div>
     </AppShell>
+  )
+}
+
+function DashboardLoading() {
+  return (
+    <div className="flex flex-col justify-center items-center min-h-[80vh] animate-fade-in">
+      <div className="flex items-center justify-center w-20 h-20 rounded-full bg-secondary/10">
+        <Sparkles className="h-10 w-10 text-secondary animate-spin-slow" />
+      </div>
+      <h2 className="mt-6 text-2xl font-display font-semibold text-center text-secondary">
+        Loading your Quick Learn...
+      </h2>
+      <p className="mt-2 text-muted-foreground text-sm">
+        Preparing your learning journey ✨
+      </p>
+    </div>
   )
 }

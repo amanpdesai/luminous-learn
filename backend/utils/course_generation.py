@@ -22,12 +22,22 @@ client = genai.Client(api_key=google_key)
 2. Pydantic schema for the syllabus generation
 '''
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 class Resource(BaseModel):
     unit_title: str
     text: str  # Example: "Official Python Documentation"
     url: str   # Example: "https://docs.python.org/3/"
+
+class GradedQuestion(BaseModel):
+    question: str
+    answer_choices: List[str]
+    answer: str  # this will be the correct answer text
+
+class Assessment(BaseModel):
+    title: str
+    instructions: Optional[str] = None
+    questions: List[GradedQuestion]
 
 class Lesson(BaseModel):
     lesson: str
@@ -42,7 +52,7 @@ class LessonComplete(BaseModel):
     readings: str
     examples: str
     exercises: str
-    assessments: str
+    assessments: Assessment
     additional_resources: List[Resource]
     duration_in_min: str
     status: str
@@ -205,7 +215,7 @@ def generate_lesson_content(lesson_title: str, lesson_summary: str, learning_obj
             "1. Readings: Clear, comprehensive explanations of key concepts",
             "2. Examples: Practical demonstrations of the concepts",
             "3. Exercises: Practice activities for students",
-            "4. Assessments: Questions to test understanding (should be auto-gradable)",
+            "4. Assessments: Questions to test understanding (should be auto-gradable) using given JSON schema",
             
             # Resources request
             "Add a final section titled 'Additional Resources' with 6 relevant links to articles, papers, books, or educational materials (not courses).",

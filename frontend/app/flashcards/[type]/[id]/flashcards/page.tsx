@@ -1,75 +1,85 @@
 "use client"
 
-import { useState } from "react"
-import { useParams } from "next/navigation"
+import { useEffect, useState } from "react"
+import { useParams, useRouter } from "next/navigation"
 import { AppShell } from "@/components/layout/app-shell"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
-import { ArrowLeft, ArrowRight, Check, RotateCcw, Shuffle, X } from "lucide-react"
+import { ArrowLeft, ArrowRight, RotateCcw, Shuffle, Sparkles } from "lucide-react"
 import Link from "next/link"
+import { supabase } from "@/lib/supabaseClient"
+import { backendUrl } from "@/lib/backendUrl"
 
+// Types
 interface Flashcard {
+  id: string
   front: string
   back: string
+  correct: number
+  incorrect: number
+}
+
+interface FlashcardSet {
+  id: string
+  title: string
+  created_at: string
+  sessions_completed: number
+  last_test_score: number
+  flashcards: {
+    flashcards: Flashcard[]
+  } | null
+}
+
+interface FetchFlashcardSetResponse {
+  flashcard_set: FlashcardSet
 }
 
 export default function FlashcardsViewPage() {
+  const [pageLoading, setPageLoading] = useState(true)
   const params = useParams() as { type: string; id: string }
   const [currentCard, setCurrentCard] = useState(0)
   const [flipped, setFlipped] = useState(false)
   const [shuffled, setShuffled] = useState(false)
   const [hideAnswers, setHideAnswers] = useState(false)
   const [autoProgress, setAutoProgress] = useState(true)
-  const [knownCards, setKnownCards] = useState<Set<number>>(new Set())
+
+  const router = useRouter()
 
   const isCourse = params.type === "course"
 
-  const flashcards: Flashcard[] = isCourse
-    ? [
-        {
-          front: "What is a variable in Python?",
-          back: "A variable is a named location in memory that stores a value. In Python, variables are created when you assign a value to them.",
-        },
-        {
-          front: "What is the difference between a list and a tuple in Python?",
-          back: "Lists are mutable (can be changed after creation) while tuples are immutable (cannot be changed after creation). Lists use square brackets [] and tuples use parentheses ().",
-        },
-        {
-          front: "What is a function in Python?",
-          back: "A function is a block of organized, reusable code that performs a specific task. Functions are defined using the 'def' keyword.",
-        },
-        {
-          front: "What is object-oriented programming?",
-          back: "Object-oriented programming (OOP) is a programming paradigm based on the concept of 'objects', which can contain data and code. Data in the form of fields (attributes), and code in the form of procedures (methods).",
-        },
-        {
-          front: "What is inheritance in OOP?",
-          back: "Inheritance is a mechanism where a new class (child class) is derived from an existing class (parent class). The child class inherits attributes and methods from the parent class.",
-        },
-      ]
-    : [
-        {
-          front: "What is a Promise in JavaScript?",
-          back: "A Promise is an object representing the eventual completion or failure of an asynchronous operation and its resulting value.",
-        },
-        {
-          front: "What are the three states of a Promise?",
-          back: "Pending: initial state, neither fulfilled nor rejected\nFulfilled: operation completed successfully\nRejected: operation failed",
-        },
-        {
-          front: "How do you create a new Promise?",
-          back: "Using the Promise constructor:\n\nconst myPromise = new Promise((resolve, reject) => {\n  // Asynchronous operation\n});",
-        },
-        {
-          front: "What is the purpose of the .then() method?",
-          back: "The .then() method is used to specify what should happen when a Promise is fulfilled. It returns a new Promise, allowing for method chaining.",
-        },
-        {
-          front: "What is the purpose of the .catch() method?",
-          back: "The .catch() method is used to handle errors in a Promise chain. It catches any rejections that occur in the preceding Promises.",
-        },
-      ]
+  const [flashcards, setFlashcards] = useState<Flashcard[]>([])
+  const [title, setTitle] = useState("")
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchFlashcardSet = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push("/auth")
+        return
+      }
+      const token = session.access_token
+  
+      try {
+        const res = await fetch(`${backendUrl}/api/flashcards/${params.type}/${params.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const data: FetchFlashcardSetResponse = await res.json()
+        setFlashcards(data.flashcard_set.flashcards?.flashcards || [])
+        setTitle(data.flashcard_set.title || "Untitled Flashcard Set")
+      } catch (error) {
+        console.error("Error fetching flashcard set:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+  
+    Promise.all([
+      fetchFlashcardSet()
+    ]).finally(() => setPageLoading(false));
+  }, [params.type, params.id, router])  
+
 
   const handleNext = () => {
     if (currentCard < flashcards.length - 1) {
@@ -87,15 +97,6 @@ export default function FlashcardsViewPage() {
 
   const handleFlip = () => setFlipped(!flipped)
 
-  const toggleKnown = () => {
-    const updated = new Set(knownCards)
-    if (knownCards.has(currentCard))
-      updated.delete(currentCard)
-    else
-      updated.add(currentCard)
-    setKnownCards(updated)
-  }
-
   const toggleShuffle = () => {
     setShuffled(!shuffled)
   }
@@ -105,29 +106,13 @@ export default function FlashcardsViewPage() {
     setFlipped(false)
   }
 
-  const getTitle = () => {
-    if (isCourse) {
-      return params.id === "1"
-        ? "Introduction to Python Programming"
-        : params.id === "2"
-        ? "Web Development Fundamentals"
-        : "Data Science Essentials"
-    } else {
-      return params.id === "1"
-        ? "JavaScript Promises"
-        : params.id === "2"
-        ? "CSS Grid Layout"
-        : params.id === "3"
-        ? "React Hooks"
-        : "Python List Comprehensions"
-    }
+  if (pageLoading){
+    return (<AppShell><DashboardLoading/></AppShell>)
   }
-
-  const title = getTitle()
 
   return (
     <AppShell>
-      <div className="space-y-10 max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 xl:px-24 pt-12 pb-32">
+      <div className="space-y-14 max-w-6xl px-8 sm:px-12 lg:px-20 xl:px-28 pt-8 pb-36">
         <div className="mb-4">
           <Link
             href={`/flashcards/${params.type}/${params.id}`}
@@ -144,6 +129,15 @@ export default function FlashcardsViewPage() {
             <p className="text-muted-foreground">Review cards one by one</p>
           </div>
 
+          {loading ? (
+            <div className="flex justify-center items-center py-24">
+              <p className="text-muted-foreground">Loading flashcards...</p>
+            </div>
+          ) : flashcards.length === 0 ? (
+            <div className="flex justify-center items-center py-24">
+              <p className="text-muted-foreground">No flashcards found for this set.</p>
+            </div>
+          ) : (<>
           <div className="space-y-2">
             <div className="h-1.5 bg-muted rounded-full overflow-hidden">
               <div
@@ -157,33 +151,33 @@ export default function FlashcardsViewPage() {
             </div>
           </div>
 
-          <div className="relative w-full max-w-5xl mx-auto aspect-[4/3] sm:aspect-[5/3] cursor-pointer perspective-1000" onClick={handleFlip}>
+          <div className="relative w-full max-w-6xl mx-auto aspect-[5/3] sm:aspect-[16/9] cursor-pointer perspective-1000" onClick={handleFlip}>
             <div className={`absolute inset-0 w-full h-full duration-500 preserve-3d ${flipped ? "rotate-y-180" : ""}`}>
               <Card className={`absolute inset-0 backface-hidden border-border/50 glow-border${isCourse? "" : "-pink"}`}>
-                <CardContent className="flex items-center justify-center h-full p-10 sm:p-12 lg:p-16">
-                  <div className="text-center">
-                    <h3 className="text-xl font-medium mb-4">{flashcards[currentCard].front}</h3>
+                <CardContent className="flex items-center justify-center h-full p-12 sm:p-16 lg:p-20">                  <div className="text-center">
+                    <h3 className="text-2xl sm:text-3xl font-semibold mb-6">{flashcards[currentCard].front}</h3>
                     <p className="text-sm text-muted-foreground">Click to flip</p>
                   </div>
                 </CardContent>
               </Card>
               <Card className={`absolute inset-0 backface-hidden rotate-y-180 border-border/50 glow-border${isCourse? "" : "-pink"}`}>
-              <CardContent className="flex items-center justify-center h-full p-10 sm:p-12 lg:p-16">
-                <div className="text-center whitespace-pre-wrap text-lg">
+              <CardContent className="flex items-center justify-center h-full p-12 sm:p-16 lg:p-20">
+                <div className="text-center whitespace-pre-wrap text-2xl sm:text-3xl font-semibold">
                     {hideAnswers ? "[Answer hidden]" : flashcards[currentCard].back}
                   </div>
                 </CardContent>
               </Card>
             </div>
-          </div>
+          </div></>)}
 
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mt-8">
             <div className="flex items-center gap-4">
-              <Button variant="outline" onClick={handlePrevious} disabled={currentCard === 0}>
+              <Button variant="outline" size="lg" onClick={handlePrevious} disabled={currentCard === 0}>
                 <ArrowLeft className="mr-2 h-4 w-4" /> Previous
               </Button>
 
               <Button
+                size="lg"
                 className={isCourse ? "glow-button" : "glow-button-pink"}
                 variant={isCourse ? "default" : "secondary"}
                 onClick={handleNext}
@@ -204,14 +198,6 @@ export default function FlashcardsViewPage() {
             </div>
 
             <div className="flex flex-wrap gap-4 md:ml-auto">
-              <Button
-                variant="outline"
-                className={`gap-2 ${knownCards.has(currentCard) ? "bg-green-500/10 text-green-500" : ""}`}
-                onClick={toggleKnown}
-              >
-                {knownCards.has(currentCard) ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
-                {knownCards.has(currentCard) ? "I Know This" : "Don't Know"}
-              </Button>
 
               <Button
                 variant="outline"
@@ -262,5 +248,21 @@ export default function FlashcardsViewPage() {
         }
       `}</style>
     </AppShell>
+  )
+}
+
+function DashboardLoading() {
+  return (
+    <div className="flex flex-col justify-center items-center min-h-[80vh] animate-fade-in">
+      <div className="flex items-center justify-center w-20 h-20 rounded-full bg-primary/10">
+        <Sparkles className="h-10 w-10 text-primary animate-spin-slow" />
+      </div>
+      <h2 className="mt-6 text-2xl font-display font-semibold text-center text-secondary">
+        Loading your Flashcards...
+      </h2>
+      <p className="mt-2 text-muted-foreground text-sm">
+        Preparing your learning journey ✨
+      </p>
+    </div>
   )
 }

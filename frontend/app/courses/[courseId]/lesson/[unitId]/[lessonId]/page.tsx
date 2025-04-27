@@ -6,17 +6,30 @@ import { AppShell } from "@/components/layout/app-shell"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, FileText, Lightbulb, List, Video } from "lucide-react"
+import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, FileText, Lightbulb, List, Sparkles, Video } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { MarkdownRenderer } from "@/components/ui/markdown-render"
 import TurndownService from "turndown"
 import { supabase } from "@/lib/supabaseClient"
+import { backendUrl } from "@/lib/backendUrl"
 
 // Type definitions for the course data structure
 type Resource = {
   unit_title: string
   text: string
   url: string
+}
+
+interface Question {
+  question: string;
+  answer_choices: string[];
+  correctAnswer: number;
+}
+
+interface Assessment {
+  title: string;
+  instructions?: string;
+  questions: Question[];
 }
 
 type LessonComplete = {
@@ -27,7 +40,7 @@ type LessonComplete = {
   readings: string
   examples: string
   exercises: string
-  assessments: string
+  assessments: Assessment
   additional_resources: Resource[]
   duration_in_min: string
   status: string
@@ -67,7 +80,7 @@ type Course = {
 // Type for quiz questions
 type QuizQuestion = {
   question: string
-  options: string[]
+  answer_choices: string[]
   correctAnswer: number
 }
 
@@ -93,7 +106,7 @@ type LessonData = {
   unit: {
     id: string | string[]
     title: string
-    lessons: any[]
+    lessons: (LessonComplete | FallbackLesson)[]
   }
   content: string
   video: {
@@ -109,6 +122,7 @@ type LessonData = {
 }
 
 export default function ModulePage() {
+  const [pageLoading, setPageLoading] = useState(true)
   const params = useParams()
   const router = useRouter()
   // Convert params to strings to prevent type errors
@@ -124,6 +138,13 @@ export default function ModulePage() {
 
   // Fetch course and lesson data
   useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push("/auth")
+        return
+      }
+    }
     const fetchCourseAndLesson = async () => {
       setLoading(true)
       
@@ -141,7 +162,7 @@ export default function ModulePage() {
       
       try {
         // Fetch the course data
-        const response = await fetch(`http://localhost:8080/api/get_user_course?course_id=${courseId}`, {
+        const response = await fetch(`${backendUrl}/api/get_user_course?course_id=${courseId}`, {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${token}`,
@@ -187,13 +208,14 @@ export default function ModulePage() {
       }
     }
     
-    if (courseId && unitId && lessonId) {
-      fetchCourseAndLesson()
-    }
+    checkAuth()
+    Promise.all([
+        fetchCourseAndLesson()
+    ]).finally(() => setPageLoading(false));
   }, [courseId, unitId, lessonId, router])
 
   // Mock lessons data for fallback
-  const [fallbackLessons, setFallbackLessons] = useState<FallbackLesson[]>([
+  const [fallbackLessons] = useState<FallbackLesson[]>([
     {
       id: 1,
       title: "Installing Python and Setting Up the Development Environment",
@@ -275,27 +297,33 @@ export default function ModulePage() {
           // Mock quiz data - in a real application, you would retrieve quiz data from the backend
           {
             question: "Which of the following statements about this lesson is true?",
-            options: ["Option A", "Option B", "Option C", "Option D"],
+            answer_choices: ["Option A", "Option B", "Option C", "Option D"],
             correctAnswer: 1,
           },
           {
             question: "What is the main topic covered in this lesson?",
-            options: ["Topic 1", "Topic 2", "Topic 3", "Topic 4"],
+            answer_choices: ["Topic 1", "Topic 2", "Topic 3", "Topic 4"],
             correctAnswer: 0,
           },
         ],
       };
     } else {
-      // Find the unit (with proper type checking)
       const currentUnit = course.units.find(u => u.unit_number.toString() === unitId);
       if (!currentUnit) {
         throw new Error("Unit not found");
       }
-
+  
+      // Grab real quiz questions
+      const quizQuestions = currentLessonData.assessments?.questions?.map((q) => ({
+        question: q.question,
+        answer_choices: q.answer_choices,
+        correctAnswer: q.correctAnswer,
+      })) || [];
+  
       return {
         id: currentLessonData.lesson || lessonId,
         title: currentLessonData.lesson || "Lesson",
-        type: "lesson", // Default to lesson type if not specified
+        type: "lesson",
         duration: currentLessonData.duration_in_min ? `${currentLessonData.duration_in_min} min` : "15 min",
         course: {
           id: courseId,
@@ -308,7 +336,7 @@ export default function ModulePage() {
         },
         content: currentLessonData.readings || "",
         video: {
-          url: "https://www.youtube.com/embed/YYXdXT2l-Gg", // Default video URL
+          url: "https://www.youtube.com/embed/YYXdXT2l-Gg",
           title: currentLessonData.lesson || "Tutorial",
         },
         resources: (currentLessonData.additional_resources || []).map((resource: Resource) => ({
@@ -316,17 +344,12 @@ export default function ModulePage() {
           url: resource.url,
           type: "documentation",
         })),
-        quiz: [
-          // Mock quiz data since we don't have actual quiz content
+        quiz: quizQuestions.length > 0 ? quizQuestions : [
+          // fallback if no quiz questions found
           {
             question: "Which of the following statements about this lesson is true?",
-            options: ["Option A", "Option B", "Option C", "Option D"],
+            answer_choices: ["Option A", "Option B", "Option C", "Option D"],
             correctAnswer: 1,
-          },
-          {
-            question: "What is the main topic covered in this lesson?",
-            options: ["Topic 1", "Topic 2", "Topic 3", "Topic 4"],
-            correctAnswer: 0,
           },
         ],
       };
@@ -398,7 +421,7 @@ export default function ModulePage() {
       // Call backend API to update lesson status (this is a mock endpoint - implement the actual endpoint)
       // You would need to implement this API endpoint in your backend
       /* 
-      await fetch(`http://localhost:8080/api/update_lesson_status`, {
+      await fetch(`${backendUrl}/api/update_lesson_status`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -435,6 +458,10 @@ export default function ModulePage() {
   // Previous and next module links
   const prevModule = currentLessonIndex > 0 ? { id: currentLessonIndex - 1 } : null
   const nextModule = currentLessonIndex < totalLessons - 1 ? { id: currentLessonIndex + 1 } : null
+
+  if (pageLoading){
+    return (<AppShell><DashboardLoading></DashboardLoading></AppShell>);
+  }
 
   return (
     <AppShell>
@@ -486,7 +513,7 @@ export default function ModulePage() {
               <div className="sticky top-24 space-y-4">
                 <h3 className="font-medium">Unit Lessons</h3>
                 <ul className="space-y-2">
-                  {(unitLessons.length > 0 ? unitLessons : fallbackLessons).map((m: any, index: number) => (
+                  {(unitLessons.length > 0 ? unitLessons : fallbackLessons).map((m: LessonComplete | FallbackLesson, index: number) => (
                     <li key={index}>
                       <Link
                         href={`/courses/${params.courseId}/lesson/${params.unitId}/${index}`}
@@ -499,7 +526,9 @@ export default function ModulePage() {
                         <span className="h-5 aspect-square rounded-full bg-muted/70 flex items-center justify-center text-xs font-medium">
                           {index + 1}
                         </span>
-                        <span className="whitespace-normal break-words leading-snug">{m.lesson || m.title}</span>
+                        <span className="whitespace-normal break-words leading-snug">{
+          'lesson' in m ? m.lesson : m.title
+        }</span>
                       </Link>
                     </li>
                   ))}
@@ -622,57 +651,61 @@ export default function ModulePage() {
                             <h3 className="font-medium">
                               {qIndex + 1}. {question.question}
                             </h3>
-                            <div className="space-y-2">
-                              {question.options.map((option: string, oIndex: number) => (
-                                <div
-                                  key={oIndex}
-                                  className={`
-                                  flex items-center p-3 rounded-md border border-border/40
-                                  ${!quizSubmitted && quizAnswers[qIndex] === oIndex ? "bg-primary/10 border-primary/50" : ""}
-                                  ${quizSubmitted && oIndex === question.correctAnswer ? "bg-green-500/10 border-green-500/50" : ""}
-                                  ${
-                                    quizSubmitted && quizAnswers[qIndex] === oIndex && oIndex !== question.correctAnswer
-                                      ? "bg-red-500/10 border-red-500/50"
-                                      : ""
-                                  }
-                                  ${quizSubmitted ? "pointer-events-none" : "cursor-pointer hover:bg-muted/30"}
-                                `}
-                                  onClick={() => !quizSubmitted && handleAnswerSelection(qIndex, oIndex)}
-                                >
-                                  <div
-                                    className={`
-                                    h-5 w-5 rounded-full mr-3 flex items-center justify-center border
-                                    ${
-                                      !quizSubmitted && quizAnswers[qIndex] === oIndex
-                                        ? "border-primary bg-primary/20"
-                                        : "border-muted-foreground"
-                                    }
-                                    ${
-                                      quizSubmitted && oIndex === question.correctAnswer
-                                        ? "border-green-500 bg-green-500/20"
-                                        : ""
-                                    }
-                                    ${
-                                      quizSubmitted &&
-                                      quizAnswers[qIndex] === oIndex &&
-                                      oIndex !== question.correctAnswer
-                                        ? "border-red-500 bg-red-500/20"
-                                        : ""
-                                    }
-                                  `}
-                                  >
-                                    {(!quizSubmitted && quizAnswers[qIndex] === oIndex) ||
-                                    (quizSubmitted && oIndex === question.correctAnswer) ? (
+                              <div className="space-y-2">
+                                {Array.isArray(question.answer_choices) && question.answer_choices.length > 0 ? (
+                                  question.answer_choices.map((option: string, oIndex: number) => (
+                                    <div
+                                      key={oIndex}
+                                      className={`
+                                        flex items-center p-3 rounded-md border border-border/40
+                                        ${!quizSubmitted && quizAnswers[qIndex] === oIndex ? "bg-primary/10 border-primary/50" : ""}
+                                        ${quizSubmitted && oIndex === question.correctAnswer ? "bg-green-500/10 border-green-500/50" : ""}
+                                        ${
+                                          quizSubmitted && quizAnswers[qIndex] === oIndex && oIndex !== question.correctAnswer
+                                            ? "bg-red-500/10 border-red-500/50"
+                                            : ""
+                                        }
+                                        ${quizSubmitted ? "pointer-events-none" : "cursor-pointer hover:bg-muted/30"}
+                                      `}
+                                      onClick={() => !quizSubmitted && handleAnswerSelection(qIndex, oIndex)}
+                                    >
                                       <div
-                                        className={`h-2 w-2 rounded-full 
-                                        ${quizSubmitted ? "bg-green-500" : "bg-primary"}`}
-                                      />
-                                    ) : null}
+                                        className={`
+                                          h-5 w-5 rounded-full mr-3 flex items-center justify-center border
+                                          ${
+                                            !quizSubmitted && quizAnswers[qIndex] === oIndex
+                                              ? "border-primary bg-primary/20"
+                                              : "border-muted-foreground"
+                                          }
+                                          ${
+                                            quizSubmitted && oIndex === question.correctAnswer
+                                              ? "border-green-500 bg-green-500/20"
+                                              : ""
+                                          }
+                                          ${
+                                            quizSubmitted && quizAnswers[qIndex] === oIndex && oIndex !== question.correctAnswer
+                                              ? "border-red-500 bg-red-500/20"
+                                              : ""
+                                          }
+                                        `}
+                                      >
+                                        {(!quizSubmitted && quizAnswers[qIndex] === oIndex) ||
+                                        (quizSubmitted && oIndex === question.correctAnswer) ? (
+                                          <div
+                                            className={`h-2 w-2 rounded-full 
+                                            ${quizSubmitted ? "bg-green-500" : "bg-primary"}`}
+                                          />
+                                        ) : null}
+                                      </div>
+                                      <span>{option}</span>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div className="text-sm text-muted-foreground">
+                                    No options available for this question.
                                   </div>
-                                  <span>{option}</span>
-                                </div>
-                              ))}
-                            </div>
+                                )}
+                              </div>
                           </div>
                         ))}
                       </div>
@@ -764,5 +797,21 @@ export default function ModulePage() {
         </Button>
       </div>
     </AppShell>
+  )
+}
+
+function DashboardLoading() {
+  return (
+    <div className="flex flex-col justify-center items-center min-h-[80vh] animate-fade-in">
+      <div className="flex items-center justify-center w-20 h-20 rounded-full bg-primary/10">
+        <Sparkles className="h-10 w-10 text-primary animate-spin-slow" />
+      </div>
+      <h2 className="mt-6 text-2xl font-display font-semibold text-center text-primary">
+        Loading your Lesson...
+      </h2>
+      <p className="mt-2 text-muted-foreground text-sm">
+        Preparing your learning journey ✨
+      </p>
+    </div>
   )
 }
