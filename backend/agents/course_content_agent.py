@@ -36,3 +36,8 @@ async def rest_full(ctx: Context, req: FullCourseRequest) -> FullCourseResponse:
     ctx.logger.info("[REST] full course")
     result = generate_full_course(req.syllabus_json)
     return FullCourseResponse(course_json=result)
+
+
+if __name__ == "__main__":
+    print("[CourseContentAgent] starting on http://localhost:8012 ...")
+    course_content_agent.run()

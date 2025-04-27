@@ -1,0 +1,5 @@
+package-lock.json
+.venv
+backend/.env
+frontend/.env.local
+backend/__pycache__

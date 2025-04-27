@@ -35,3 +35,9 @@ async def rest_ql(ctx: Context, req: GenerateQuickLearn) -> QuickLearnResponse:
     ctx.logger.info("[REST] quick learn %s/%s", req.topic, req.difficulty)
     data = generate_quick_learn(req.topic, req.difficulty)
     return QuickLearnResponse(data=data)
+
+
+# Entry-point
+if __name__ == "__main__":
+    print("[QuickLearnAgent] starting on http://localhost:8011 ...")
+    quick_learn_agent.run()

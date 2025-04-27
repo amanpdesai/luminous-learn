@@ -34,3 +34,8 @@ async def rest_generate(ctx: Context, req: GenerateSyllabus) -> SyllabusResponse
     ctx.logger.info("[REST] syllabus for %s/%s", req.topic, req.difficulty)
     text = generate_syllabus(req.topic, req.difficulty, req.depth)
     return SyllabusResponse(json_text=text)
+
+
+if __name__ == "__main__":
+    print("[SyllabusAgent] starting on http://localhost:8010 ...")
+    syllabus_agent.run()
