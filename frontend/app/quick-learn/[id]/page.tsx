@@ -7,7 +7,7 @@ import { AppShell } from "@/components/layout/app-shell"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, Clock, FileText, Lightbulb, Sparkles, Zap } from "lucide-react"
+import { ArrowLeft, ArrowRight, BookOpen, Check, CheckCircle2, Clock, FileText, Lightbulb, Sparkles, Zap } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { MarkdownRenderer } from "@/components/ui/markdown-render"
 import TurndownService from "turndown"
@@ -17,6 +17,7 @@ import { backendUrl } from "@/lib/backendUrl"
 // --- Types ---
 interface QuickLearnSection {
   id: string;
+  status: string;
   title: string;
   readings: string;
   examples: string;
@@ -61,7 +62,7 @@ export default function QuickLearnPage() {
   const params = useParams()
   const router = useRouter()
   const { id } = params as { id: string }
-  const [currentSection, setCurrentSection] = useState(0)
+  const [currentSection, setCurrentSection] = useState<number>(0)
   const [isCompleted, setIsCompleted] = useState(false)
   const [activeTab, setActiveTab] = useState("content")
   const [session, setSession] = useState<QuickLearnData | null>(null)
@@ -126,6 +127,13 @@ export default function QuickLearnPage() {
           userId: data.user_id,
           estimated_duration_minutes: data.estimated_duration_minutes
         })
+
+        const firstIncompleteIndex = (data.sections || []).findIndex((section: any) => section.status !== "completed")
+        if (firstIncompleteIndex !== -1) {
+          setCurrentSection(firstIncompleteIndex)
+        } else {
+          setCurrentSection(0)  // fallback if all are completed
+        }
       } catch (err) {
         console.error('Error fetching quick learn:', err)
       }
@@ -182,9 +190,50 @@ export default function QuickLearnPage() {
     markComplete()
   }
 
-  const markComplete = () => {
-    setIsCompleted(true)
-  }
+  const markComplete = async () => {
+    if (isCompleted || !session) return;
+    try {
+      const sesh = await supabase.auth.getSession();
+      const token = sesh.data.session?.access_token;
+      const user = sesh.data.session?.user;
+      if (!user || !token) throw new Error("Not logged in");
+  
+      // Clone the unit_lessons array
+      const updatedData = session.sections.map((section) => {
+        if (section.id === session.sections[currentSection].id) {
+          // Update the matching lesson's status
+          return { ...section, status: "completed" };
+        }
+        return section;
+      });
+  
+      const courseData = {
+        unit_lessons: updatedData,
+      };
+  
+      const response = await fetch(`${backendUrl}/api/update_quick_learn/${session.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(courseData),
+      });
+  
+      if (!response.ok) throw new Error("Failed to update lesson");
+
+      session.sections[currentSection].status = "completed";
+  
+      // Optional: Update local course state if needed
+      // setCourse(prev => prev ? { ...prev, unit_lessons: updatedLessons } : null);
+  
+      console.log("Lesson marked as completed!");
+      setIsCompleted(true);
+    } catch (err) {
+      console.error("Error marking lesson as complete:", err);
+      alert("Failed to update lesson. Please try again.");
+    }
+  };
 
   const handleNextSection = () => {
     if (currentSection < sections.length - 1) {
@@ -215,14 +264,14 @@ export default function QuickLearnPage() {
         <div className="bg-muted/20 border-b border-border/40 py-4">
           <div className="px-4 lg:px-8 py-6 w-full">
             <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
                 <Link href="/quick-learn" className="hover:text-foreground transition-colors">
                   Quick Learn
                 </Link>
                 <span>/</span>
                 <span>{session?.title}</span>
               </div>
-              <h1 className="text-xl md:text-2xl font-display">{currentSectionData?.title || 'Loading...'}</h1>
+              <h1 className="text-xl md:text-2xl font-display mb-3">{currentSectionData?.title || 'Loading...'}</h1>
               <div className="flex flex-wrap gap-3 text-sm">
                 <div className="flex items-center gap-2">
                   <Zap className="h-4 w-4 text-secondary" />
@@ -262,7 +311,7 @@ export default function QuickLearnPage() {
                         }`}
                       >
                         <span className="h-5 aspect-square rounded-full flex items-center justify-center text-xs font-medium bg-muted/70">
-                          {index + 1}
+                          {section.status === "completed" ? <Check className="h-4 w-4 text-green-400" /> : <>{index + 1}</>}
                         </span>
                         <span className="whitespace-normal break-words leading-snug">{section.title}</span>
                       </button>
@@ -390,42 +439,43 @@ export default function QuickLearnPage() {
             </div>
               :  
               <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                <TabsList className="ml-8 w-full max-w-lg px-1 py-5 bg-card border border-border rounded-full mb-6 z-10 relative shadow-sm flex gap-1">
-                  <TabsTrigger
-                    value="content"
-                    className="flex-1 px-10 py-4 text-base font-medium rounded-full transition-all
-                      text-muted-foreground hover:text-foreground
-                      [data-state='active']:text-white
-                      [data-state='active']:bg-secondary/60
-                      [data-state='active']:shadow
-                      [data-state='active']:glow-text-pink"
-                  >
-                    Content
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="examples"
-                    className="flex-1 px-7 py-4 text-base font-medium rounded-full transition-all
-                      text-muted-foreground hover:text-foreground
-                      [data-state='active']:text-white
-                      [data-state='active']:bg-secondary/60
-                      [data-state='active']:shadow
-                      [data-state='active']:glow-text-pink"
-                  >
-                    Examples
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="resources"
-                    className="flex-1 px-7 py-4 text-base font-medium rounded-full transition-all
-                      text-muted-foreground hover:text-foreground
-                      [data-state='active']:text-white
-                      [data-state='active']:bg-secondary/60
-                      [data-state='active']:shadow
-                      [data-state='active']:glow-text-pink"
-                  >
-                    Resources
-                  </TabsTrigger>
-                </TabsList>
+                <TabsList className="ml-8 w-full max-w-lg px-1 py-5 bg-muted/20 border border-border rounded-full mb-6 z-10 relative shadow-sm flex gap-1">
+                    <TabsTrigger
+                      value="content"
+                      className="flex-1 px-10 py-4 text-base font-medium rounded-full transition-all
+                        text-muted-foreground hover:text-foreground
+                        data-[state=active]:text-white
+                        data-[state=active]:bg-secondary
+                        data-[state=active]:shadow
+                        data-[state=active]:glow-text"
+                    >
+                      Content"
+                    </TabsTrigger>
 
+                    <TabsTrigger
+                      value="examples"
+                      className="flex-1 px-7 py-4 text-base font-medium rounded-full transition-all
+                        text-muted-foreground hover:text-foreground
+                        data-[state=active]:text-white
+                        data-[state=active]:bg-secondary
+                        data-[state=active]:shadow
+                        data-[state=active]:glow-text"
+                    >
+                      Examples
+                    </TabsTrigger>
+
+                    <TabsTrigger
+                      value="resources"
+                      className="flex-1 px-7 py-4 text-base font-medium rounded-full transition-all
+                        text-muted-foreground hover:text-foreground
+                        data-[state=active]:text-white
+                        data-[state=active]:bg-secondary
+                        data-[state=active]:shadow
+                        data-[state=active]:glow-text"
+                    >
+                      Resources
+                    </TabsTrigger>
+                  </TabsList>
                 <TabsContent value="content" className="animate-in fade-in-50 duration-300">
                   <div className="w-full ml-8">
                     <div className="prose prose-invert max-w-none mb-8">

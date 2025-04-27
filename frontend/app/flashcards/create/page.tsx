@@ -146,7 +146,7 @@ export default function CreateFlashcardsPage() {
         <Card className="border-border/50">
           <CardContent className="p-6 sm:p-8">
             <Tabs value={tab} onValueChange={setTab} className="space-y-6">
-              <TabsList className="inline-flex justify-start items-center px-1 py-5 bg-card border border-border rounded-full shadow-sm w-full max-w-lg mb-2">
+              <TabsList className="flex w-full max-w-3xl mx-auto justify-center px-1 py-5 bg-card border border-border rounded-full shadow-sm mb-2">
                 <TabsTrigger
                   value="courses"
                   className="px-6 py-4 text-sm font-medium rounded-full transition-all text-muted-foreground hover:text-foreground data-[state=active]:text-white data-[state=active]:bg-primary/60 data-[state=active]:shadow data-[state=active]:glow-text"
@@ -161,11 +161,11 @@ export default function CreateFlashcardsPage() {
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value={tab} className="space-y-8">
+              <TabsContent value={tab} className="space-y-8 w-full">
                 <div>
                   <h2 className="text-lg font-medium mb-4">Select a source</h2>
-                  <div className="overflow-x-auto hide-scrollbar">
-                    <div className="flex gap-6 pb-2 min-w-fit">
+                    <div className="w-full">
+                      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                       {data.map((item) => {
                         const isCourse = tab === "courses"
                         const isSelected = selectedContext === item.id
@@ -182,7 +182,13 @@ export default function CreateFlashcardsPage() {
                         return (
                           <Card
                             key={item.id}
-                            className={`min-w-[280px] sm:min-w-[320px] max-w-[320px] border-border/50 cursor-pointer transition-all hover:border-border/70 ${borderColor}`}
+                            className={`min-h-[160px] flex flex-col justify-between border-border/50 transition-all hover:shadow-md hover:border-primary/40 dark:hover:border-primary/60 ${
+                              isSelected
+                                ? isCourse
+                                  ? "border-primary glow-border"
+                                  : "border-secondary glow-border-pink"
+                                : ""
+                            }`}
                             onClick={() => setSelectedContext(item.id)}
                           >
                             <CardContent className="p-4">
