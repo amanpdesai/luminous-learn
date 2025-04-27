@@ -56,6 +56,7 @@ class LessonComplete(BaseModel):
     additional_resources: List[Resource]
     duration_in_min: str
     status: str
+    videos: List[str] = []  # <--- added videos field
 
 class Unit(BaseModel):
     unit_number: int
@@ -114,6 +115,7 @@ def generate_course_from_syllabus(syllabus_json: dict) -> dict:
     total_lessons = total_lessons = sum(len(unit.lesson_outline) for unit in course_from_syllabus.units)
     print("init vars")
     # Now generate lesson contents
+    # Initialize all_content with empty slots
     all_content = [None] * total_lessons
     threads = []
     index = 0
@@ -134,8 +136,15 @@ def generate_course_from_syllabus(syllabus_json: dict) -> dict:
 
     print("All lessons generated.")
 
+    # Verify video data is present in all_content
+    for i, lesson in enumerate(all_content):
+        if lesson and "error" not in lesson:
+            # Check if 'videos' exists and log its contents
+            videos = lesson.get('videos', [])
+            print(f"[VIDEO DEBUG] Lesson #{i+1} '{lesson.get('lesson', 'unknown')}' has {len(videos)} videos: {videos}")
+
     # Finally wrap it into CourseFull
-    print("creeating course full")
+    print("creating course full")
 
     print(all_content)
     try:
@@ -160,10 +169,25 @@ def generate_course_from_syllabus(syllabus_json: dict) -> dict:
                 for unit in course_from_syllabus.units
             ],
             unit_lessons=[
-                LessonComplete(**lesson)
+                # Create each LessonComplete object, ensuring videos are preserved
+                # Note: This explicit approach ensures videos are properly included
+                LessonComplete(
+                    unit_number=lesson.get('unit_number', 0),
+                    lesson=lesson.get('lesson', ''),
+                    lesson_summary=lesson.get('lesson_summary', ''),
+                    learning_objectives=lesson.get('learning_objectives', []),
+                    readings=lesson.get('readings', ''),
+                    examples=lesson.get('examples', ''),
+                    exercises=lesson.get('exercises', ''),
+                    assessments=lesson.get('assessments', {'title': '', 'questions': []}),
+                    additional_resources=lesson.get('additional_resources', []),
+                    duration_in_min=lesson.get('duration_in_min', ''),
+                    status=lesson.get('status', 'not started'),
+                    videos=lesson.get('videos', [])  # Explicitly include videos
+                )
                 for lesson in all_content
                 if lesson and "error" not in lesson  # <-- SKIP error lessons
-            ],  # will fill later
+            ],  # videos are explicitly preserved in LessonComplete objects
             is_draft=course_from_syllabus.is_draft,
             last_accessed=course_from_syllabus.last_accessed,
             completed=course_from_syllabus.completed,
@@ -190,6 +214,30 @@ def generate_lesson_threaded(lesson, unit_title, index, unit_number, all_content
             unit_title  # unit title
         )
         
+        # Video enrichment directly within the lesson generation thread
+        if os.getenv("ENABLE_VIDEO_ENRICH", "false").lower() == "true":
+            try:
+                print(f"[THREAD] Fetching videos for lesson: '{lesson.lesson}'")
+                resp = requests.post(
+                    "http://localhost:8014/generate_videos",
+                    json={"query": f"{lesson.lesson} tutorial", "max_results": 3},
+                    headers={"Content-Type": "application/json"},
+                    timeout=10,
+                )
+                if resp.status_code == 200:
+                    vids = resp.json().get("videos", [])
+                    print(f"[THREAD] Found {len(vids)} videos for lesson '{lesson.lesson}'")
+                    lesson_content["videos"] = vids
+                else:
+                    print(f"[THREAD] YouTube agent request failed (status {resp.status_code}) for lesson '{lesson.lesson}'")
+            except Exception as vid_err:
+                print(f"[THREAD] Video enrichment error for lesson '{lesson.lesson}': {vid_err}")
+        # Ensure 'videos' key exists even if enrichment disabled/failed
+        lesson_content.setdefault("videos", [])
+        
+        # Print the videos for debugging
+        print(f"[DEBUG] Video URLs for lesson '{lesson.lesson}': {lesson_content['videos']}")
+
         # Now, directly update the 2D array at the correct index
         lesson_content["unit_number"] = unit_number
         all_content[index] = lesson_content  # Assign to the specific slot in the 2D array

@@ -31,13 +31,14 @@ async def _handle(ctx: Context, msg: VideoRequest):
 
 
 @video_agent.on_rest_post("/generate_videos", VideoRequest, VideoResponse)
-async def rest(ctx: Context, req: VideoRequest) -> VideoResponse:
+async def rest(ctx: Context, req: VideoRequest):
     ctx.logger.info("[REST] video query: %s (max_results: %d)", req.query, req.max_results)
     videos = fetch_videos(req.query, req.max_results)
     ctx.logger.info("[REST] Found %d videos for query '%s':", len(videos), req.query)
     for i, video in enumerate(videos):
         ctx.logger.info("  [%d] %s", i+1, video)
-    return VideoResponse(videos=videos, query=req.query)
+    # Return plain dictionary instead of VideoResponse model instance
+    return {"videos": videos, "query": req.query}
 
 
 if __name__ == "__main__":
