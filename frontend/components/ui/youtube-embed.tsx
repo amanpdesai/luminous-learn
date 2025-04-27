@@ -7,63 +7,43 @@ interface YouTubeEmbedProps {
 }
 
 export const YouTubeEmbed: React.FC<YouTubeEmbedProps> = ({ videos }) => {
-  console.log('YouTubeEmbed received videos:', videos);
+  // Filter out invalid URLs and Rick Roll videos
+  const validVideoIds = videos
+    ?.map(url => {
+      const match = url.match(/(?:youtube\.com\/.*[?&]v=|youtu\.be\/)([^&?\n]+)/);
+      return match?.[1] || null;
+    })
+    .filter(id => {
+      // Filter out null values (invalid URLs)
+      if (!id) return false;
+      
+      // Filter out Rick Roll video IDs (most common Rick Roll video)
+      const rickRollIds = ['dQw4w9WgXcQ', 'oHg5SJYRHA0'];
+      return !rickRollIds.includes(id);
+    }) || [];
   
-  if (!videos || videos.length === 0) {
-    console.log('No videos available to render');
-    return (
-      <div className="mt-6 mb-8 p-4 border border-yellow-500/30 bg-yellow-500/10 rounded-md">
-        <h3 className="text-xl font-semibold mb-3 text-white">Videos Debug View</h3>
-        <p className="text-yellow-400">No videos were provided to the component. If you expected videos, check the backend response.</p>
-      </div>
-    );
+  // Don't render anything if there are no valid videos
+  if (!validVideoIds.length) {
+    return null;
   }
-
-  // Count valid and invalid URLs
-  const validVideos = videos.filter(url => url.match(/[?&]v=([^&]+)/)?.[1]).length;
   
   return (
     <div className="mt-6 mb-8">
-      <h3 className="text-xl font-semibold mb-3 text-white">Related Videos ({validVideos}/{videos.length} valid)</h3>
-      
-      {/* Debug information */}
-      <div className="mb-4 p-3 border border-blue-500/30 bg-blue-500/10 rounded-md">
-        <details>
-          <summary className="cursor-pointer text-blue-400 font-semibold">Debug: Video URLs</summary>
-          <div className="mt-2 p-2 bg-zinc-900 rounded text-xs">
-            <pre>
-              {JSON.stringify(videos, null, 2)}
-            </pre>
-          </div>
-        </details>
-      </div>
+      <h3 className="text-xl font-semibold mb-3 text-white">Related Videos</h3>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {videos.map((url, index) => {
-          // Extract video ID from YouTube URL
-          const videoId = url.match(/[?&]v=([^&]+)/)?.[1];
-          
-          if (!videoId) {
-            return (
-              <div key={index} className="p-3 border border-red-500/30 bg-red-500/10 rounded-md">
-                <p className="text-red-400 text-sm">Invalid YouTube URL: {url}</p>
-              </div>
-            );
-          }
-
-          return (
-            <div key={index} className="aspect-video-container">
-              <iframe
-                className="aspect-video-iframe"
-                src={`https://www.youtube.com/embed/${videoId}`}
-                title={`Video ${index + 1}`}
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              ></iframe>
-            </div>
-          )
-        })}
+        {validVideoIds.map((videoId, index) => (
+          <div key={index} className="aspect-video-container">
+            <iframe
+              className="aspect-video-iframe"
+              src={`https://www.youtube.com/embed/${videoId}`}
+              title={`Video ${index + 1}`}
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            ></iframe>
+          </div>
+        ))}
       </div>
     </div>
   )

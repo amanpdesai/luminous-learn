@@ -111,10 +111,6 @@ interface MarkdownRendererProps {
 }
 
 export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, videos = [] }) => {
-  // Log when the component renders with videos
-  useEffect(() => {
-    console.log('MarkdownRenderer received videos:', videos);
-  }, [videos]);
   
   useEffect(() => {
     if (!document.getElementById('math-renderer-styles')) {

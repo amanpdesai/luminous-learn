@@ -215,28 +215,47 @@ def generate_lesson_threaded(lesson, unit_title, index, unit_number, all_content
         )
         
         # Video enrichment directly within the lesson generation thread
+        retry_count = 0
+        max_retries = 3
+        success = False
+
+        # Always try to fetch videos if the feature is enabled
         if os.getenv("ENABLE_VIDEO_ENRICH", "false").lower() == "true":
-            try:
-                print(f"[THREAD] Fetching videos for lesson: '{lesson.lesson}'")
-                resp = requests.post(
-                    "http://localhost:8014/generate_videos",
-                    json={"query": f"{lesson.lesson} tutorial", "max_results": 3},
-                    headers={"Content-Type": "application/json"},
-                    timeout=10,
-                )
-                if resp.status_code == 200:
-                    vids = resp.json().get("videos", [])
-                    print(f"[THREAD] Found {len(vids)} videos for lesson '{lesson.lesson}'")
-                    lesson_content["videos"] = vids
-                else:
-                    print(f"[THREAD] YouTube agent request failed (status {resp.status_code}) for lesson '{lesson.lesson}'")
-            except Exception as vid_err:
-                print(f"[THREAD] Video enrichment error for lesson '{lesson.lesson}': {vid_err}")
+            while retry_count < max_retries and not success:
+                try:
+                    print(f"[THREAD] Fetching videos for lesson: '{lesson.lesson}' (attempt {retry_count+1})")
+                    resp = requests.post(
+                        "http://localhost:8014/generate_videos",
+                        json={"query": f"{lesson.lesson} tutorial", "max_results": 3},
+                        headers={"Content-Type": "application/json"},
+                        timeout=15,  # Increased timeout
+                    )
+                    if resp.status_code == 200:
+                        vids = resp.json().get("videos", [])
+                        if vids:  # Only consider it successful if we got actual videos
+                            print(f"[THREAD] Found {len(vids)} videos for lesson '{lesson.lesson}'")
+                            lesson_content["videos"] = vids
+                            success = True
+                        else:
+                            print(f"[THREAD] No videos returned for lesson '{lesson.lesson}'")
+                            retry_count += 1
+                            time.sleep(1)  # Brief delay before retrying
+                    else:
+                        print(f"[THREAD] YouTube agent request failed (status {resp.status_code}) for lesson '{lesson.lesson}'")
+                        retry_count += 1
+                        time.sleep(1)  # Brief delay before retrying
+                except Exception as vid_err:
+                    print(f"[THREAD] Video enrichment error for lesson '{lesson.lesson}': {vid_err}")
+                    retry_count += 1
+                    time.sleep(1)  # Brief delay before retrying
+
         # Ensure 'videos' key exists even if enrichment disabled/failed
-        lesson_content.setdefault("videos", [])
+        if "videos" not in lesson_content or not lesson_content["videos"]:
+            lesson_content["videos"] = []
+            print(f"[WARN] No videos available for lesson '{lesson.lesson}' after {retry_count} attempts")
         
         # Print the videos for debugging
-        print(f"[DEBUG] Video URLs for lesson '{lesson.lesson}': {lesson_content['videos']}")
+        print(f"[VIDEO DEBUG] Final videos for lesson '{lesson.lesson}': {lesson_content['videos']}")
 
         # Now, directly update the 2D array at the correct index
         lesson_content["unit_number"] = unit_number
