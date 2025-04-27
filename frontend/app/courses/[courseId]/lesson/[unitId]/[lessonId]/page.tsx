@@ -6,7 +6,7 @@ import { AppShell } from "@/components/layout/app-shell"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, FileText, Lightbulb, List, Sparkles, Video } from "lucide-react"
+import { ArrowLeft, ArrowRight, BookOpen, Check, CheckCircle2, FileText, Lightbulb, List, Sparkles, Video } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { MarkdownRenderer } from "@/components/ui/markdown-render"
 import TurndownService from "turndown"
@@ -124,6 +124,7 @@ type LessonData = {
 export default function ModulePage() {
   const [pageLoading, setPageLoading] = useState(true)
   const params = useParams()
+  const [isMarkComplete, setIsMarkComplete] = useState(false)
   const router = useRouter()
   // Convert params to strings to prevent type errors
   const courseId = Array.isArray(params.courseId) ? params.courseId[0] : params.courseId || ""
@@ -397,63 +398,77 @@ export default function ModulePage() {
     const score = Math.round((correctCount / lesson.quiz.length) * 100)
     setQuizScore(score)
     setQuizSubmitted(true)
-
-    if (score >= 70) {
-      markComplete()
-    }
   }
 
-  const markComplete = async () => {
-    // Already marked as complete
-    if (isCompleted) return;
-    
-    setIsCompleted(true);
-    
-    // In a real application, you would update the status in your backend
+  const markComplete = async (lessonTitle: string) => {
+    if (isCompleted || !course) return;
     try {
-      // Get current user session
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      
-      const token = session.access_token;
-      if (!token) return;
-      
-      // Call backend API to update lesson status (this is a mock endpoint - implement the actual endpoint)
-      // You would need to implement this API endpoint in your backend
-      /* 
-      await fetch(`${backendUrl}/api/update_lesson_status`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          course_id: courseId,
-          unit_id: unitId,
-          lesson_id: lessonId,
-          status: "completed",
-        }),
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      const user = session.data.session?.user;
+      if (!user || !token) throw new Error("Not logged in");
+  
+      // Clone the unit_lessons array
+      const updatedLessons = course.unit_lessons.map((lesson) => {
+        if (lesson.lesson === lessonTitle) {
+          // Update the matching lesson's status
+          return { ...lesson, status: "completed" };
+        }
+        return lesson;
       });
-      */
-      
-      // Update local state
-      if (currentLessonData) {
-        setCurrentLessonData({
-          ...currentLessonData,
-          status: "completed",
-        });
-      }
-      
-      console.log("Lesson marked as complete");
-    } catch (error) {
-      console.error("Error marking lesson as complete:", error);
-      setIsCompleted(false); // Revert UI state if update fails
+  
+      const courseData = {
+        unit_lessons: updatedLessons,
+        completed: course.completed + 1
+      };
+  
+      const response = await fetch(`${backendUrl}/api/update_draft/${course.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(courseData),
+      });
+  
+      if (!response.ok) throw new Error("Failed to update lesson");
+
+      setIsMarkComplete(true)
+  
+      // Optional: Update local course state if needed
+      // setCourse(prev => prev ? { ...prev, unit_lessons: updatedLessons } : null);
+  
+      console.log("Lesson marked as completed!");
+      setIsCompleted(true);
+    } catch (err) {
+      console.error("Error marking lesson as complete:", err);
+      alert("Failed to update lesson. Please try again.");
     }
-  }
+  };
 
   // Calculate current lesson index and navigation links
   const currentLessonIndex = parseInt(lessonId as string)
   const totalLessons = unitLessons.length || fallbackLessons.length
+
+  let getCompletedRemaining = (course: Course | null, unitIndex: number) => {
+    if (!course) return 0;
+  
+    const totalCompleted = course.completed || 0;
+  
+    // Sum up the lessons in all previous units
+    const lessonsBeforeThisUnit = course.units
+      .slice(0, unitIndex) // Take all units before this one
+      .reduce((sum, unit) => sum + (unit.lesson_outline?.length || 0), 0);
+  
+    // Completed remaining for this unit
+    const completedRemaining = totalCompleted - lessonsBeforeThisUnit;
+  
+    // It can't be negative (if somehow more completed than exist)
+    return Math.max(0, completedRemaining);
+  };
+  
+
+  let completedRemaining = getCompletedRemaining(course, parseInt(unitId) - 1);
   
   // Previous and next module links
   const prevModule = currentLessonIndex > 0 ? { id: currentLessonIndex - 1 } : null
@@ -523,8 +538,8 @@ export default function ModulePage() {
                             : "hover:bg-muted/50"
                         }`}
                       >
-                        <span className="h-5 aspect-square rounded-full bg-muted/70 flex items-center justify-center text-xs font-medium">
-                          {index + 1}
+                        <span className="h-5 w-5 rounded-full bg-muted/70 flex items-center justify-center text-xs font-medium">
+                          {completedRemaining >= index + 1 || isMarkComplete ? <Check className="h-4 w-4 text-green-400" /> : <>{index + 1}</>}
                         </span>
                         <span className="whitespace-normal break-words leading-snug">{
           'lesson' in m ? m.lesson : m.title
@@ -614,7 +629,7 @@ export default function ModulePage() {
                           Completed
                         </Button>
                       ) : (
-                        <Button onClick={markComplete} className="gap-2">
+                        <Button onClick={() => markComplete(lesson.title)} className="gap-2">
                           <CheckCircle2 className="h-4 w-4" />
                           Mark as Complete
                         </Button>

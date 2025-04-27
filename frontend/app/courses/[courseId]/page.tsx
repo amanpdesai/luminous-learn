@@ -7,6 +7,7 @@ import {
   Book,
   BookOpen,
   Calendar,
+  Check,
   ChevronDown,
   Clock,
   FileText,
@@ -149,6 +150,8 @@ export default function CoursePage() {
   const totalLessons = course?.units?.reduce((total, unit) => {
     return total + (unit.lesson_outline ? unit.lesson_outline.length : 0);
   }, 0) || 0
+
+  let completedCount = course?.completed || 0
   
   // Format duration and hours per week for display
   const duration = course ? `${course.estimated_number_of_weeks} weeks` : ''
@@ -206,6 +209,10 @@ export default function CoursePage() {
 
   // Function to get the appropriate icon for lesson type
   const getModuleIcon = (type: string) => {
+    completedCount = completedCount-1
+    if (completedCount >= 0){
+      return <Check className="h-4 w-4 text-green-400" />
+    }else{
     switch (type) {
       case "video":
         return <Video className="h-4 w-4 text-red-400" />
@@ -216,7 +223,7 @@ export default function CoursePage() {
       case "lesson":
       default:
         return <Book className="h-4 w-4 text-blue-400" />
-    }
+    }}
   }
 
   if (pageLoading || !course){
@@ -248,10 +255,10 @@ export default function CoursePage() {
                     {course.level}
                   </Button>
                   <h1 className="text-2xl md:text-3xl font-display glow-text mb-2">{course.title}</h1>
-                  <p className="text-muted-foreground max-w-4xl">{course.description}</p>
+                  <p className="text-muted-foreground">{course.description}</p>
                 </div>
 
-                <div className="flex flex-col gap-2 md:items-end">
+                <div className="flex flex-col gap-2 md:items-end mr-10">
                   <Button variant="default" className="glow-button" asChild>
                     <Link href={`/courses/${course.id}/lesson/${getCurrentLessonLink()}`}>
                       Continue Learning
