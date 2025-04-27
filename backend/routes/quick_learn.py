@@ -130,3 +130,39 @@ def delete_quick_learn_route(quick_learn_id):
     except Exception as e:
         print(f"[ERROR] Exception in delete_quick_learn_route: {str(e)}")
         return jsonify({"error": f"Failed to delete quick learn: {str(e)}"}), 500
+
+@quick_learn_bp.route('/update_quick_learn/<quick_learn_id>', methods=['PUT', 'OPTIONS'])
+@cross_origin(origin="http://localhost:3000", methods=["PUT", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
+def update_quick_learn(quick_learn_id):
+    if request.method == "OPTIONS":
+        return '', 200
+
+    try:
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
+        user_id = verify_token_and_get_user_id(token)
+
+        if not user_id:
+            return jsonify({"error": "Unauthorized"}), 401
+
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Missing request body"}), 400
+
+        unit_lessons = data.get("unit_lessons")
+        if unit_lessons is None:
+            return jsonify({"error": "Missing 'unit_lessons' field"}), 400
+
+        from utils.token_verification import supabase  # your supabase client
+
+        response = supabase.from_("quick_learns").update({
+            "sections": unit_lessons
+        }).eq("id", quick_learn_id).eq("user_id", user_id).execute()
+
+        if not response.data or len(response.data) == 0:
+            return jsonify({"error": "Failed to update quick learn"}), 500
+
+        return jsonify({"message": "Quick Learn updated successfully"}), 200
+
+    except Exception as e:
+        print(f"[ERROR] Exception in update_quick_learn: {str(e)}")
+        return jsonify({"error": f"Failed to update quick learn: {str(e)}"}), 500

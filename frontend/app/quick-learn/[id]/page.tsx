@@ -231,7 +231,6 @@ export default function QuickLearnPage() {
       setIsCompleted(true);
     } catch (err) {
       console.error("Error marking lesson as complete:", err);
-      alert("Failed to update lesson. Please try again.");
     }
   };
 
@@ -271,7 +270,11 @@ export default function QuickLearnPage() {
                 <span>/</span>
                 <span>{session?.title}</span>
               </div>
-              <h1 className="text-xl md:text-2xl font-display mb-3">{currentSectionData?.title || 'Loading...'}</h1>
+              <h1 className="text-xl md:text-2xl font-display mb-3">
+                {currentSectionData?.title 
+                  || (currentSection === sections.length ? "Assessment" : "Loading...")
+                }
+              </h1>
               <div className="flex flex-wrap gap-3 text-sm">
                 <div className="flex items-center gap-2">
                   <Zap className="h-4 w-4 text-secondary" />
@@ -520,7 +523,7 @@ export default function QuickLearnPage() {
                         </Button>
                       ) : (
                         <Button className="glow-button-pink bg-secondary hover:bg-secondary/90">
-                          Complete Session
+                          Take Assessment
                           <CheckCircle2 className="ml-2 h-4 w-4" />
                         </Button>
                       )}
