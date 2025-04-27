@@ -52,7 +52,6 @@ const containsBlockElement = (node: unknown): boolean => {
     "ol",
     "dl",
     "blockquote",
-    "code",
   ])
 
   if (disallowed.has(n.tagName)) return true
