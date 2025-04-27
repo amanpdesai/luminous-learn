@@ -40,7 +40,7 @@ type LessonComplete = {
   readings: string
   examples: string
   exercises: string
-  assessments: Assessment
+  assessments: QuizQuestion
   additional_resources: Resource[]
   duration_in_min: string
   status: string
@@ -57,6 +57,7 @@ type Unit = {
   title: string
   unit_description: string
   lesson_outline: LessonOutline[]
+  unit_assessment: Assessment
 }
 
 type Course = {
@@ -81,7 +82,7 @@ type Course = {
 type QuizQuestion = {
   question: string
   answer_choices: string[]
-  correctAnswer: number
+  answer: string
 }
 
 // Type for fallback lesson data
@@ -118,7 +119,7 @@ type LessonData = {
     url: string
     type: string
   }[]
-  quiz: QuizQuestion[]
+  quiz: QuizQuestion
 }
 
 export default function ModulePage() {
@@ -293,32 +294,17 @@ export default function ModulePage() {
                 type: "documentation",
               },
             ],
-        quiz: [
-          // Mock quiz data - in a real application, you would retrieve quiz data from the backend
-          {
-            question: "Which of the following statements about this lesson is true?",
-            answer_choices: ["Option A", "Option B", "Option C", "Option D"],
-            correctAnswer: 1,
-          },
-          {
-            question: "What is the main topic covered in this lesson?",
-            answer_choices: ["Topic 1", "Topic 2", "Topic 3", "Topic 4"],
-            correctAnswer: 0,
-          },
-        ],
+        quiz: {
+          question: "Which of the following statements about this lesson is true?",
+          answer_choices: ["Option A", "Option B", "Option C", "Option D"],
+          answer: "Option A",
+        },
       };
     } else {
       const currentUnit = course.units.find(u => u.unit_number.toString() === unitId);
       if (!currentUnit) {
         throw new Error("Unit not found");
       }
-  
-      // Grab real quiz questions
-      const quizQuestions = currentLessonData.assessments?.questions?.map((q) => ({
-        question: q.question,
-        answer_choices: q.answer_choices,
-        correctAnswer: q.correctAnswer,
-      })) || [];
   
       return {
         id: currentLessonData.lesson || lessonId,
@@ -344,14 +330,11 @@ export default function ModulePage() {
           url: resource.url,
           type: "documentation",
         })),
-        quiz: quizQuestions.length > 0 ? quizQuestions : [
-          // fallback if no quiz questions found
-          {
-            question: "Which of the following statements about this lesson is true?",
-            answer_choices: ["Option A", "Option B", "Option C", "Option D"],
-            correctAnswer: 1,
-          },
-        ],
+        quiz: currentLessonData.assessments || {
+          question: "Which of the following statements about this lesson is true?",
+          answer_choices: ["Option A", "Option B", "Option C", "Option D"],
+          correctAnswer: 1,
+        },
       };
     }
   };
@@ -387,20 +370,22 @@ export default function ModulePage() {
   }
 
   const handleQuizSubmit = () => {
-    let correctCount = 0
-    lesson.quiz.forEach((question: QuizQuestion, index: number) => {
-      if (quizAnswers[index] === question.correctAnswer) {
-        correctCount++
-      }
-    })
+    if (!currentLessonData?.assessments) {
+      return
+    }
 
-    const score = Math.round((correctCount / lesson.quiz.length) * 100)
+    let correctCount = 0
+    console.log("QUIZ ANSWERS")
+    console.log(quizAnswers)
+    if (currentLessonData.assessments.answer_choices[quizAnswers[0]] === currentLessonData.assessments.answer) {
+      correctCount++
+    }
+
+    const score = correctCount === 1 ? 100 : 0;
     setQuizScore(score)
     setQuizSubmitted(true)
 
-    if (score >= 70) {
-      markComplete()
-    }
+    markComplete()
   }
 
   const markComplete = async () => {
@@ -462,6 +447,7 @@ export default function ModulePage() {
   if (pageLoading){
     return (<AppShell><DashboardLoading></DashboardLoading></AppShell>);
   }
+  console.log(lesson.quiz)
 
   return (
     <AppShell>
@@ -642,81 +628,70 @@ export default function ModulePage() {
                     <div className="bg-muted/20 p-6 rounded-lg border border-border/40">
                       <h2 className="text-xl font-medium mb-4">Knowledge Check</h2>
                       <p className="mb-6 text-muted-foreground">
-                        Test your understanding of the lesson content with these questions.
+                        Test your understanding of the section content with this question.
                       </p>
-
+      
                       <div className="space-y-8">
-                        {lesson.quiz.map((question: QuizQuestion, qIndex: number) => (
-                          <div key={qIndex} className="space-y-4">
+                      {lesson.quiz && (
+                          <div className="space-y-4">
                             <h3 className="font-medium">
-                              {qIndex + 1}. {question.question}
+                              1. {lesson.quiz.question}
                             </h3>
-                              <div className="space-y-2">
-                                {Array.isArray(question.answer_choices) && question.answer_choices.length > 0 ? (
-                                  question.answer_choices.map((option: string, oIndex: number) => (
-                                    <div
-                                      key={oIndex}
-                                      className={`
-                                        flex items-center p-3 rounded-md border border-border/40
-                                        ${!quizSubmitted && quizAnswers[qIndex] === oIndex ? "bg-primary/10 border-primary/50" : ""}
-                                        ${quizSubmitted && oIndex === question.correctAnswer ? "bg-green-500/10 border-green-500/50" : ""}
-                                        ${
-                                          quizSubmitted && quizAnswers[qIndex] === oIndex && oIndex !== question.correctAnswer
-                                            ? "bg-red-500/10 border-red-500/50"
-                                            : ""
-                                        }
-                                        ${quizSubmitted ? "pointer-events-none" : "cursor-pointer hover:bg-muted/30"}
-                                      `}
-                                      onClick={() => !quizSubmitted && handleAnswerSelection(qIndex, oIndex)}
-                                    >
-                                      <div
-                                        className={`
-                                          h-5 w-5 rounded-full mr-3 flex items-center justify-center border
-                                          ${
-                                            !quizSubmitted && quizAnswers[qIndex] === oIndex
-                                              ? "border-primary bg-primary/20"
-                                              : "border-muted-foreground"
-                                          }
-                                          ${
-                                            quizSubmitted && oIndex === question.correctAnswer
-                                              ? "border-green-500 bg-green-500/20"
-                                              : ""
-                                          }
-                                          ${
-                                            quizSubmitted && quizAnswers[qIndex] === oIndex && oIndex !== question.correctAnswer
-                                              ? "border-red-500 bg-red-500/20"
-                                              : ""
-                                          }
-                                        `}
-                                      >
-                                        {(!quizSubmitted && quizAnswers[qIndex] === oIndex) ||
-                                        (quizSubmitted && oIndex === question.correctAnswer) ? (
-                                          <div
-                                            className={`h-2 w-2 rounded-full 
-                                            ${quizSubmitted ? "bg-green-500" : "bg-primary"}`}
-                                          />
-                                        ) : null}
-                                      </div>
-                                      <span>{option}</span>
-                                    </div>
-                                  ))
-                                ) : (
-                                  <div className="text-sm text-muted-foreground">
-                                    No options available for this question.
-                                  </div>
-                                )}
-                              </div>
-                          </div>
-                        ))}
-                      </div>
+                            <div className="space-y-2">
+                            {lesson.quiz.answer_choices.map((option, oIndex) => {
+                              const isUserSelected = quizAnswers[0] === oIndex
+                              const isCorrectAnswer = lesson.quiz.answer_choices[oIndex] === lesson.quiz.answer
+                              const isWrongSelected = isUserSelected && !isCorrectAnswer
 
+                              return (
+                                <div
+                                  key={oIndex}
+                                  className={`
+                                    flex items-center p-3 rounded-md border border-border/40
+                                    ${quizSubmitted && isCorrectAnswer ? "bg-green-500/10 border-green-500/50" : ""}
+                                    ${quizSubmitted && isWrongSelected ? "bg-red-500/10 border-red-500/50" : ""}
+                                    ${!quizSubmitted && isUserSelected ? "bg-secondary/10 border-secondary/50" : ""}
+                                    ${quizSubmitted ? "pointer-events-none" : "cursor-pointer hover:bg-muted/30"}
+                                  `}
+                                  onClick={() => !quizSubmitted && handleAnswerSelection(0, oIndex)}
+                                >
+                                  <div
+                                    className={`
+                                      h-5 w-5 rounded-full mr-3 flex items-center justify-center border
+                                      ${
+                                        quizSubmitted && isCorrectAnswer
+                                          ? "border-green-500 bg-green-500/20"
+                                          : quizSubmitted && isWrongSelected
+                                          ? "border-red-500 bg-red-500/20"
+                                          : !quizSubmitted && isUserSelected
+                                          ? "border-secondary bg-secondary/20"
+                                          : "border-muted-foreground"
+                                      }
+                                    `}
+                                  >
+                                    {(quizSubmitted && isCorrectAnswer) || (!quizSubmitted && isUserSelected) ? (
+                                      <div
+                                        className={`h-2 w-2 rounded-full ${
+                                          quizSubmitted && isCorrectAnswer ? "bg-green-500" : "bg-secondary"
+                                        }`}
+                                      />
+                                    ) : null}
+                                  </div>
+                                  <span>{option}</span>
+                                </div>
+                              )
+                            })}
+                            </div>
+                          </div>
+                        )}
+
+                      </div>
+      
                       {quizSubmitted ? (
                         <div className="mt-8 p-4 rounded-md bg-muted/30 text-center">
                           <h3 className="text-xl font-medium mb-2">Your Score: {quizScore}%</h3>
                           <p className="mb-4 text-muted-foreground">
-                            {quizScore >= 70
-                              ? "Great job! You've passed the quiz."
-                              : "Review the material and try again to improve your score."}
+                            {"Great job on completing the quiz!"}
                           </p>
                           <Button
                             onClick={() => {
@@ -724,15 +699,15 @@ export default function ModulePage() {
                               setQuizSubmitted(false)
                               setQuizScore(0)
                             }}
+                            className="glow-button-pink bg-secondary hover:bg-secondary/90"
                           >
                             Retry Quiz
                           </Button>
                         </div>
                       ) : (
                         <Button
-                          className="mt-8 w-full glow-button"
+                          className="mt-8 w-full glow-button-pink bg-secondary hover:bg-secondary/90"
                           onClick={handleQuizSubmit}
-                          disabled={Object.keys(quizAnswers).length < lesson.quiz.length}
                         >
                           Submit Answers
                         </Button>
