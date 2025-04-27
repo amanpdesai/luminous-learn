@@ -1,0 +1,18 @@
+ERROR:    [network]: Query failed with error: _InactiveRpcError.
+ERROR:    [network]: Failed to query contract version. Contract interactions will be disabled.
+ERROR:    [network]: Query failed with error: _InactiveRpcError.
+ERROR:    [network]: Failed to query contract version. Contract interactions will be disabled.
+ERROR:    [network]: Query failed with error: _InactiveRpcError.
+ERROR:    [network]: Failed to query contract version. Contract interactions will be disabled.
+<frozen runpy>:128: RuntimeWarning: 'agents.course_content_agent' found in sys.modules after import of package 'agents', but prior to execution of 'agents.course_content_agent'; this may result in unpredictable behaviour
+ERROR:    [network]: Query failed with error: _InactiveRpcError.
+ERROR:    [network]: Failed to query contract version. Contract interactions will be disabled.
+[CourseContentAgent] starting on http://localhost:8012 ...
+INFO:     [course_content_agent]: Starting agent with address: agent1qg263p7gwexxjeqaf3hy3a9kf025rn9gtn05a0mcmkwaey9v0knlqpgw3s3
+INFO:     [course_content_agent]: Starting agent with address: agent1qg263p7gwexxjeqaf3hy3a9kf025rn9gtn05a0mcmkwaey9v0knlqpgw3s3
+INFO:     [course_content_agent]: Agent inspector available at https://agentverse.ai/inspect/?uri=http%3A//127.0.0.1%3A8012&address=agent1qg263p7gwexxjeqaf3hy3a9kf025rn9gtn05a0mcmkwaey9v0knlqpgw3s3
+INFO:     [course_content_agent]: Agent inspector available at https://agentverse.ai/inspect/?uri=http%3A//127.0.0.1%3A8012&address=agent1qg263p7gwexxjeqaf3hy3a9kf025rn9gtn05a0mcmkwaey9v0knlqpgw3s3
+INFO:     [course_content_agent]: Starting server on http://0.0.0.0:8012 (Press CTRL+C to quit)
+INFO:     [course_content_agent]: Starting server on http://0.0.0.0:8012 (Press CTRL+C to quit)
+INFO:     [uagents.registration]: Registration on Almanac API successful
+INFO:     [uagents.registration]: No Ledger available. Skipping registration on Almanac contract.

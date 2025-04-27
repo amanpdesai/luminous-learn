@@ -1,9 +1,11 @@
 "use client"
 
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo, useState, useEffect  } from "react"
+import { supabase } from "@/lib/supabaseClient"
+
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { BookOpen, Calendar, ExternalLink, Filter, Layers, Plus, Search, Zap } from "lucide-react"
+import { BookOpen, Calendar, ExternalLink, Filter, Layers, Plus, Search, Sparkles, Zap } from "lucide-react"
 
 import { AppShell } from "@/components/layout/app-shell"
 import { Button } from "@/components/ui/button"
@@ -11,92 +13,104 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { formatDistanceToNowStrict, parseISO } from "date-fns"
+import { formatDistanceToNowStrict } from "date-fns"
 
 export default function FlashcardsPage() {
   const router = useRouter()
   const [tab, setTab] = useState("courses")
 
-  const courseSets = useMemo(() => [
-    {
-      id: 1,
-      title: "Introduction to Python Programming",
-      cardCount: 42,
-      lastReviewed: "2025-04-23T02:29:56.254Z",
-      courseType: "Full Course",
-      progress: { stillLearning: 10, stillStudying: 12, mastered: 20 },
-    },
-    {
-      id: 2,
-      title: "Web Development Fundamentals",
-      cardCount: 36,
-      lastReviewed: "2025-04-24T02:29:56.254Z",
-      courseType: "Full Course",
-      progress: { stillLearning: 5, stillStudying: 15, mastered: 16 },
-    },
-    {
-      id: 3,
-      title: "Data Science Essentials",
-      cardCount: 28,
-      lastReviewed: "2025-04-18T02:29:56.254Z",
-      courseType: "Full Course",
-      progress: { stillLearning: 8, stillStudying: 10, mastered: 10 },
-    },
-  ], [])
+  const [courseSets, setCourseSets] = useState<FlashcardSet[]>([])
+  const [quickLearnSets, setQuickLearnSets] = useState<FlashcardSet[]>([])
+  const [loadingCourses, setLoadingCourses] = useState(true)
+  const [loadingQuickLearns, setLoadingQuickLearns] = useState(true)
+
+  useEffect(() => {
+    const fetchFlashcardSets = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          router.push("/auth")
+          return
+        }
+        const token = session.access_token
+    
+        setLoadingCourses(true)
+        const resCourses = await fetch("https://luminous-learn.onrender.com/api/flashcard_sets?type=course", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const rawCourseSetsData = await resCourses.json()
+        
+        const courseSetsData: FlashcardSet[] = (rawCourseSetsData || []).map((set: unknown) => {
+          if (typeof set !== 'object' || set === null) {
+            throw new Error('Invalid flashcard set received from backend (course)')
+          }
+          const safeSet = set as { [key: string]: unknown }
+          return {
+            ...safeSet,
+            flashcards: Array.isArray((safeSet.flashcards)) 
+              ? safeSet.flashcards 
+              : (safeSet.flashcards as { flashcards?: unknown[] })?.flashcards ?? [],
+          } as FlashcardSet
+        })
+        setCourseSets(courseSetsData)
+        console.log('Filtered course sets:', courseSetsData)
+    
+        setLoadingQuickLearns(true)
+        const resQuickLearns = await fetch("https://luminous-learn.onrender.com/api/flashcard_sets?type=quick-learn", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const rawQuickLearnSetsData = await resQuickLearns.json()
+        
+        const quickLearnSetsData: FlashcardSet[] = (rawQuickLearnSetsData || []).map((set: unknown) => {
+          if (typeof set !== 'object' || set === null) {
+            throw new Error('Invalid flashcard set received from backend (quick-learn)')
+          }
+          const safeSet = set as { [key: string]: unknown }
+          return {
+            ...safeSet,
+            flashcards: Array.isArray((safeSet.flashcards)) 
+              ? safeSet.flashcards 
+              : (safeSet.flashcards as { flashcards?: unknown[] })?.flashcards ?? [],
+          } as FlashcardSet
+        })
+        setQuickLearnSets(quickLearnSetsData)
+    
+      } catch (error) {
+        console.error("Error fetching flashcard sets:", error)
+      } finally {
+        setLoadingCourses(false)
+        setLoadingQuickLearns(false)
+      }
+    }    
   
-  const quickLearnSets = useMemo(() => [
-    {
-      id: 1,
-      title: "JavaScript Promises",
-      cardCount: 12,
-      lastReviewed: "2025-04-22T02:29:56.254Z",
-      duration: "15 min",
-      progress: { stillLearning: 3, stillStudying: 4, mastered: 5 },
-    },
-    {
-      id: 2,
-      title: "CSS Grid Layout",
-      cardCount: 8,
-      lastReviewed: "2025-04-20T02:29:56.254Z",
-      duration: "10 min",
-      progress: { stillLearning: 2, stillStudying: 3, mastered: 3 },
-    },
-    {
-      id: 3,
-      title: "React Hooks",
-      cardCount: 15,
-      lastReviewed: "2025-04-24T02:29:56.254Z",
-      duration: "20 min",
-      progress: { stillLearning: 4, stillStudying: 6, mastered: 5 },
-    },
-    {
-      id: 4,
-      title: "Python List Comprehensions",
-      cardCount: 6,
-      lastReviewed: "2025-04-21T02:29:56.254Z",
-      duration: "8 min",
-      progress: { stillLearning: 1, stillStudying: 2, mastered: 3 },
-    },
-  ], [])  
+    fetchFlashcardSets()
+  }, [router])  
 
   const [searchTerm, setSearchTerm] = useState("")
   type SortOption = "title_asc" | "title_desc" | "cards_asc" | "cards_desc" | "lastReviewed_asc" | "lastReviewed_desc"
   const [sortOption, setSortOption] = useState<SortOption>("title_asc")
 
   const sortAndFilterSets = useCallback(
-    (sets: typeof courseSets | typeof quickLearnSets) => {
+    (sets: FlashcardSet[] = []) => {
+      if (!sets || !Array.isArray(sets)) return []
+  
       return [...sets]
         .filter((set) => set.title.toLowerCase().includes(searchTerm.toLowerCase()))
         .sort((a, b) => {
           const [key, dir] = sortOption.split("_")
+  
           if (key === "cards") {
-            return dir === "asc" ? a.cardCount - b.cardCount : b.cardCount - a.cardCount
+            const aCards = a.flashcards?.length || 0
+            const bCards = b.flashcards?.length || 0
+            return dir === "asc" ? aCards - bCards : bCards - aCards
           }
+  
           if (key === "lastReviewed") {
-            const dateA = new Date(a.lastReviewed).getTime()
-            const dateB = new Date(b.lastReviewed).getTime()
+            const dateA = new Date(a.last_accessed).getTime()
+            const dateB = new Date(b.last_accessed).getTime()
             return dir === "asc" ? dateA - dateB : dateB - dateA
           }
+  
           return dir === "asc"
             ? a.title.localeCompare(b.title)
             : b.title.localeCompare(a.title)
@@ -107,6 +121,10 @@ export default function FlashcardsPage() {
 
   const filteredCourses = useMemo(() => sortAndFilterSets(courseSets), [courseSets, sortAndFilterSets])
   const filteredQuickLearn = useMemo(() => sortAndFilterSets(quickLearnSets), [quickLearnSets, sortAndFilterSets])
+
+  if (loadingCourses || loadingQuickLearns){
+    return (<AppShell><DashboardLoading></DashboardLoading></AppShell>)
+  }
 
   return (
     <div className="flex-1 w-full mx-auto">
@@ -161,53 +179,40 @@ export default function FlashcardsPage() {
 
           <Tabs defaultValue="courses" onValueChange={setTab} className="space-y-6">
             <TabsList className="inline-flex justify-start items-center px-1 py-6 bg-card border border-border rounded-full mb-6 z-10 relative shadow-sm">
-              <TabsTrigger value="courses" className="px-6 py-5 text-base font-medium rounded-full transition-all text-muted-foreground hover:text-foreground data-[state=active]:text-white data-[state=active]:bg-primary/60 data-[state=active]:shadow data-[state=active]:glow-text">Course Flashcards</TabsTrigger>
-              <TabsTrigger value="quick-learn" className="px-6 py-5 text-base font-medium rounded-full transition-all text-muted-foreground hover:text-foreground data-[state=active]:text-white data-[state=active]:bg-secondary/60 data-[state=active]:shadow data-[state=active]:glow-text">Quick Learn Flashcards</TabsTrigger>
+              <TabsTrigger value="courses" className="px-6 py-5 text-base font-medium rounded-full transition-all text-muted-foreground hover:text-foreground data-[state=active]:text-white data-[state=active]:bg-primary/60 data-[state=active]:shadow data-[state=active]:glow-text">
+                Course Flashcards
+              </TabsTrigger>
+              <TabsTrigger value="quick-learn" className="px-6 py-5 text-base font-medium rounded-full transition-all text-muted-foreground hover:text-foreground data-[state=active]:text-white data-[state=active]:bg-secondary/60 data-[state=active]:shadow data-[state=active]:glow-text">
+                Quick Learn Flashcards
+              </TabsTrigger>
             </TabsList>
 
+            {/* COURSES */}
             <TabsContent value="courses" className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 animate-in fade-in-50 duration-300">
-              {filteredCourses.map((set) => (
-                <FlashcardCard key={set.id} set={set} type="course" />
-              ))}
-              <Card className="border-border/50 border-dashed bg-muted/50 card-hover">
-                <CardContent className="flex flex-col items-center justify-center h-full py-10">
-                  <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                    <Plus className="h-7 w-7 text-primary" />
-                  </div>
-                  <h3 className="text-lg font-medium mb-2">Create Flashcard Set</h3>
-                  <p className="text-sm text-muted-foreground text-center mb-5 max-w-xs">
-                    Generate flashcards from your courses to help with memorization
-                  </p>
-                  <Button className="glow-button" onClick={() => router.push(`/flashcards/create?tab=${tab}`)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Set
-                  </Button>
-                </CardContent>
-              </Card>
+              {loadingCourses ? (
+                <LoadingCards />
+              ) : (
+                <>
+                  {filteredCourses.map((set) => (
+                    <FlashcardCard key={set.id} set={set} type="course" />
+                  ))}
+                  <CreateNewSetCard type="course" />
+                </>
+              )}
             </TabsContent>
 
+            {/* QUICK LEARN */}
             <TabsContent value="quick-learn" className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 animate-in fade-in-50 duration-300">
-              {filteredQuickLearn.map((set) => (
-                <FlashcardCard key={set.id} set={set} type="quick-learn" />
-              ))}
-              <Card className="border-border/50 border-dashed bg-muted/50 card-hover">
-                <CardContent className="flex flex-col items-center justify-center h-full py-10">
-                  <div className="h-14 w-14 rounded-full bg-secondary/10 flex items-center justify-center mb-4">
-                    <Plus className="h-7 w-7 text-secondary" />
-                  </div>
-                  <h3 className="text-lg font-medium mb-2">Create Quick Learn Set</h3>
-                  <p className="text-sm text-muted-foreground text-center mb-5 max-w-xs">
-                    Generate flashcards from your quick learn sessions
-                  </p>
-                  <Button
-                    className="glow-button-pink bg-secondary hover:bg-secondary/90"
-                    onClick={() => router.push(`/flashcards/create?tab=${tab}`)}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Set
-                  </Button>
-                </CardContent>
-              </Card>
+              {loadingQuickLearns ? (
+                <LoadingCards />
+              ) : (
+                <>
+                  {filteredQuickLearn.map((set) => (
+                    <FlashcardCard key={set.id} set={set} type="quick-learn" />
+                  ))}
+                  <CreateNewSetCard type="quick-learn" />
+                </>
+              )}
             </TabsContent>
           </Tabs>
         </div>
@@ -216,24 +221,74 @@ export default function FlashcardsPage() {
   )
 }
 
-type FlashcardSet = {
-  id: number
-  title: string
-  cardCount: number
-  lastReviewed: string
-  courseType?: string
-  duration?: string
-  progress: {
-    stillLearning: number
-    stillStudying: number
-    mastered: number
+type Flashcard = {
+  front: string
+  back: string
+  trueorfalseq: {
+    question: string
+    answer: boolean
   }
+  multiplechoice: {
+    question: string
+    choices: string[]
+    correct_choice: string
+  }
+  freeresponse: {
+    question: string
+    answer: string
+  }
+  incorrect: number
+  correct: number
 }
+
+type FlashcardSet = {
+  id: string
+  title: string
+  flashcards: Flashcard[]
+  last_accessed: string
+  source_type: "course" | "quick-learn"
+  still_learning_count: number
+  still_studying_count: number
+  mastered_count: number
+}
+
 
 function FlashcardCard({ set, type }: { set: FlashcardSet; type: "course" | "quick-learn" }) {
   const Icon = type === "course" ? Layers : Zap
   const color = type === "course" ? "primary" : "secondary"
   const href = `/flashcards/${type}/${set.id}`
+
+  const cardCount = set.flashcards?.length ?? 0
+
+  // ✨ New categorization based on each card's correct/incorrect
+  let stillLearning = 0
+  let stillStudying = 0
+  let mastered = 0
+
+  set.flashcards?.forEach((card) => {
+    const correct = card.correct ?? 0
+    const incorrect = card.incorrect ?? 0
+
+    const totalAttempts = correct + incorrect
+
+    if (totalAttempts === 0) {
+      stillLearning += 1
+    } else {
+      const accuracy = correct / totalAttempts
+      if (accuracy < 0.5) {
+        stillLearning += 1
+      } else if (accuracy < 0.85) {
+        stillStudying += 1
+      } else {
+        if (correct >= 3) {
+          mastered += 1
+        } else {
+          stillStudying += 1
+        }
+      }
+    }
+  })
+
 
   return (
     <Card className="border-border/50 card-hover group">
@@ -245,36 +300,68 @@ function FlashcardCard({ set, type }: { set: FlashcardSet; type: "course" | "qui
         <CardTitle className={`text-lg group-hover:text-${color} transition-colors line-clamp-1`}>
           {set.title}
         </CardTitle>
-        <CardDescription className="mt-1.5">Flashcard set for {type} material</CardDescription>
+        <CardDescription className="mt-1.5">
+          Flashcard set for {type} material
+        </CardDescription>
       </CardHeader>
+
       <CardContent className="pb-3">
         <div className="space-y-3">
+          {/* Cards and Last Reviewed */}
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="flex items-center gap-1.5">
               <BookOpen className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">{set.cardCount} cards</span>
+              <span className="text-muted-foreground">{cardCount} cards</span>
             </div>
             <div className="flex items-center gap-1.5 justify-end">
-              {<Calendar />}
-              <span className="text-muted-foreground">{formatDistanceToNowStrict(parseISO(set.lastReviewed), { addSuffix: true })}</span>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">
+                {set.last_accessed ? (
+                  (() => {
+                    const localTime = new Date();
+                    const accessedTime = new Date(set.last_accessed);
+
+                    if (accessedTime > localTime) {
+                      // It's in the future due to UTC drift, treat as "Just now"
+                      return "Just now";
+                    }
+
+                    return formatDistanceToNowStrict(accessedTime, { addSuffix: true });
+                  })()
+                ) : "Just now"}
+              </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-xs">
-          {["red", "amber", "green"].map((color, i) => {
-            const val = Object.values(set.progress)[i] as number
-            return (
-              <div key={color} className={`h-1.5 bg-${color}-500/30 rounded-full flex-1`}>
-                <div
-                  className={`h-full bg-${color}-500 rounded-full`}
-                  style={{ width: `${(val / set.cardCount) * 100}%` }}
-                />
-              </div>
-            )
-          })}
+          {/* Thin Progress Bars */}
+          <div className="flex items-center gap-2 text-xs mt-2">
+            {/* Red - Still Learning */}
+            <div className="h-1.5 bg-red-500/30 rounded-full flex-1 overflow-hidden">
+              <div
+                className="h-full bg-red-500 rounded-full"
+                style={{ width: `${cardCount ? (stillLearning / cardCount) * 100 : 0}%` }}
+              />
+            </div>
+
+            {/* Amber - Still Studying */}
+            <div className="h-1.5 bg-amber-500/30 rounded-full flex-1 overflow-hidden">
+              <div
+                className="h-full bg-amber-500 rounded-full"
+                style={{ width: `${cardCount ? (stillStudying / cardCount) * 100 : 0}%` }}
+              />
+            </div>
+
+            {/* Green - Mastered */}
+            <div className="h-1.5 bg-green-500/30 rounded-full flex-1 overflow-hidden">
+              <div
+                className="h-full bg-green-500 rounded-full"
+                style={{ width: `${cardCount ? (mastered / cardCount) * 100 : 0}%` }}
+              />
+            </div>
           </div>
         </div>
       </CardContent>
+
       <CardFooter className="pt-3">
         <Button className={`w-full ${type === "quick-learn" ? "glow-button-pink bg-secondary hover:bg-secondary/90" : "glow-button"}`} asChild>
           <Link href={href}>
@@ -284,5 +371,61 @@ function FlashcardCard({ set, type }: { set: FlashcardSet; type: "course" | "qui
         </Button>
       </CardFooter>
     </Card>
+  )
+}
+
+function LoadingCards() {
+  return (
+    <>
+      {Array.from({ length: 3 }).map((_, index) => (
+        <Card key={index} className="border-border/50 animate-pulse">
+          <CardContent className="p-6 space-y-4">
+            <div className="h-6 w-2/3 bg-muted rounded" />
+            <div className="h-4 w-1/2 bg-muted rounded" />
+            <div className="h-4 w-3/4 bg-muted rounded" />
+          </CardContent>
+        </Card>
+      ))}
+    </>
+  )
+}
+
+function CreateNewSetCard({ type }: { type: "course" | "quick-learn" }) {
+  const router = useRouter()
+  const color = type === "course" ? "primary" : "secondary"
+  return (
+    <Card className="border-border/50 border-dashed bg-muted/50 card-hover">
+      <CardContent className="flex flex-col items-center justify-center h-full py-10">
+        <div className={`h-14 w-14 rounded-full bg-${color}/10 flex items-center justify-center mb-4`}>
+          <Plus className={`h-7 w-7 text-${color}`} />
+        </div>
+        <h3 className="text-lg font-medium mb-2">Create Flashcard Set</h3>
+        <p className="text-sm text-muted-foreground text-center mb-5 max-w-xs">
+          {type === "course"
+            ? "Generate flashcards from your course content"
+            : "Generate flashcards from your quick learn session"}
+        </p>
+        <Button className={type === "course" ? "glow-button" : "glow-button-pink bg-secondary hover:bg-secondary/90"} onClick={() => router.push(`/flashcards/create?tab=${type === "course" ? "courses" : "quick-learn"}`)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Create Set
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}
+
+function DashboardLoading() {
+  return (
+    <div className="flex flex-col justify-center items-center min-h-[80vh] animate-fade-in">
+      <div className="flex items-center justify-center w-20 h-20 rounded-full bg-primary/10">
+        <Sparkles className="h-10 w-10 text-primary animate-spin-slow" />
+      </div>
+      <h2 className="mt-6 text-2xl font-display font-semibold text-center text-secondary">
+        Loading your Flashcards...
+      </h2>
+      <p className="mt-2 text-muted-foreground text-sm">
+        Preparing your learning journey ✨
+      </p>
+    </div>
   )
 }

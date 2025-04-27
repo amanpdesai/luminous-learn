@@ -17,19 +17,27 @@ def create_quick_learn():
 
     try:
         data = request.get_json()
+        print(f"[DEBUG] Incoming request data: {data}")
         topic = data.get('topic')
         difficulty = data.get('difficulty')
+        print(f"[DEBUG] Extracted topic: {topic}")
+        print(f"[DEBUG] Extracted difficulty: {difficulty}")
 
         if not topic or not difficulty:
+            print("[DEBUG] Missing topic or difficulty parameter.")
             return jsonify({"error": "Missing required parameters: topic and difficulty"}), 400
 
         valid_difficulties = ["beginner", "intermediate", "advanced"]
         if difficulty.lower() not in valid_difficulties:
+            print(f"[DEBUG] Invalid difficulty received: {difficulty}")
             return jsonify({"error": f"Invalid difficulty level. Must be one of: {', '.join(valid_difficulties)}"}), 400
 
         token = request.headers.get("Authorization", "").replace("Bearer ", "")
+        print(f"[DEBUG] Extracted token: {token}")
         user_id = verify_token_and_get_user_id(token)
+        print(f"[DEBUG] Extracted user_id: {user_id}")
         if not user_id:
+            print("[DEBUG] Invalid or expired token.")
             return jsonify({"error": "Invalid or expired token"}), 401
 
         print(f"[INFO] Generating quick learn for topic: {topic}, difficulty: {difficulty}")
@@ -52,14 +60,19 @@ def create_quick_learn():
 
         print(f"[INFO] Saving quick learn to database...")
         db_response = save_quick_learn(quick_learn_content, token)
+        print(f"[DEBUG] db_response: {db_response}")
 
         if isinstance(db_response, tuple) and isinstance(db_response[1], int):
+            print(f"[DEBUG] Returning tuple db_response: {db_response}")
             return jsonify(db_response[0]), db_response[1]
 
+        print(f"[DEBUG] Returning db_response as JSON: {db_response}")
         return jsonify(db_response), 200
 
     except Exception as e:
+        import traceback
         print(f"[ERROR] Exception in create_quick_learn: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({"error": f"Failed to generate quick learn: {str(e)}"}), 500
 
 # -------------------------------

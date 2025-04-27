@@ -13,6 +13,7 @@ import { Progress } from "@/components/ui/progress"
 import { AppShell } from "@/components/layout/app-shell"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { supabase } from "@/lib/supabaseClient"
+import { backendUrl } from "@/lib/backendUrl"
 
 type Course = {
   id: string
@@ -26,15 +27,44 @@ type Course = {
   currentLesson: number
 }
 
+type RawCourse = {
+  id: string
+  title?: string
+  description?: string
+  created_at?: string
+  last_accessed?: string
+  completed?: number
+  is_draft?: boolean
+  unit_lessons?: {
+    lesson: string
+    unit_number: number
+    status: string
+  }[]
+  units?: {
+    unit_number: number
+    lesson_outline: {
+      lesson: string
+    }[]
+  }[]
+}
+
 type SortOption = "progress_asc" | "progress_desc" | "lessons_asc" | "lessons_desc" | "lastAccessed_asc" | "lastAccessed_desc"
 
 export default function CoursesPage() {
+  const [pageLoading, setPageLoading] = useState(true)
   const [courses, setCourses] = useState<Course[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [sortOption, setSortOption] = useState<SortOption>("lastAccessed_desc")
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) router.push("/auth")
+    }
+    
     const fetchData = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
@@ -49,7 +79,7 @@ export default function CoursesPage() {
       }
     
       try {
-        const response = await fetch("http://localhost:8080/api/get_user_courses", {
+        const response = await fetch(`${backendUrl}/api/get_user_courses`, {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${token}`,
@@ -63,7 +93,7 @@ export default function CoursesPage() {
     
         const rawCourses = await response.json()
     
-        const shapedCourses = rawCourses.map((course: any) => {
+        const shapedCourses = (rawCourses as RawCourse[]).map((course) => {
           const totalLessons = course.unit_lessons?.length ?? 0
           const completedLessons = course.completed ?? 0
           const isDraft = course.is_draft === true
@@ -75,8 +105,8 @@ export default function CoursesPage() {
           // If we have unit_lessons, find the first incomplete lesson
           if (Array.isArray(course.unit_lessons) && course.unit_lessons.length > 0) {
             const incompleteLesson = course.unit_lessons.find(
-              (lesson: any) => lesson.status !== "completed"
-            )
+              (lesson: NonNullable<RawCourse["unit_lessons"]>[number]) => lesson.status !== "completed"
+            )            
             
             if (incompleteLesson) {
               // Use the first incomplete lesson
@@ -85,13 +115,13 @@ export default function CoursesPage() {
               // Find the index of this lesson within its unit
               if (Array.isArray(course.units)) {
                 const unitIndex = course.units.findIndex(
-                  (unit: any) => unit.unit_number === currentUnit
-                )
+                  (unit: NonNullable<RawCourse["units"]>[number]) => unit.unit_number === currentUnit
+                )                
                 
                 if (unitIndex >= 0 && Array.isArray(course.units[unitIndex]?.lesson_outline)) {
                   const lessonIndex = course.units[unitIndex].lesson_outline.findIndex(
-                    (outline: any) => outline.lesson === incompleteLesson.lesson
-                  )
+                    (outline: NonNullable<RawCourse["units"]>[number]["lesson_outline"][number]) => outline.lesson === incompleteLesson.lesson
+                  )                  
                   
                   if (lessonIndex >= 0) {
                     currentLesson = lessonIndex
@@ -122,8 +152,47 @@ export default function CoursesPage() {
       }
     }    
   
-    fetchData()
+    checkAuth();
+    Promise.all([
+      fetchData()
+    ]).finally(() => setPageLoading(false));
   }, [router])  
+
+  const handleDeleteCourse = async (courseId: string) => {
+    setIsDeleting(true);
+    setDeleteTarget(courseId);
+    
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      
+      if (!token) {
+        throw new Error("You must be logged in to delete a course");
+      }
+      
+      const response = await fetch(`${backendUrl}/api/delete_course/${courseId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete course");
+      }
+      
+      // Remove the course from the state
+      setCourses(courses.filter(course => course.id !== courseId));
+      
+    } catch (error) {
+      console.error("Error deleting course:", error);
+      alert("Failed to delete course. Please try again.");
+    } finally {
+      setIsDeleting(false);
+      setDeleteTarget(null);
+    }
+  };
 
   const filteredAndSortedCourses = useMemo(() => {
     const filtered = courses.filter(c =>
@@ -145,6 +214,15 @@ export default function CoursesPage() {
   
     return filtered
   }, [courses, searchTerm, sortOption])  
+  
+  if (pageLoading) {
+    
+    return (<div className="flex-1 w-full mx-auto">
+      <AppShell>
+        <DashboardLoading />
+      </AppShell>
+        </div>)
+  }
 
   return (
     <div className="flex-1 w-full mx-auto">
@@ -253,8 +331,13 @@ export default function CoursesPage() {
                         <Button variant="outline" size="sm" asChild>
                           <Link href={`/courses/${course.id}/edit`}>Edit Outline</Link>
                         </Button>
-                        <Button variant="outline" size="sm" asChild>
-                          <Link href={`/courses/${course.id}/edit`}>Delete Outline</Link>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleDeleteCourse(course.id)}
+                          disabled={isDeleting && deleteTarget === course.id}
+                        >
+                          {isDeleting && deleteTarget === course.id ? 'Deleting...' : 'Delete Outline'}
                         </Button>
                       </>
                     ) : (
@@ -293,6 +376,22 @@ export default function CoursesPage() {
           </div>
         </div>
       </AppShell>
+    </div>
+  )
+}
+
+function DashboardLoading() {
+  return (
+    <div className="flex flex-col justify-center items-center min-h-[80vh] animate-fade-in">
+      <div className="flex items-center justify-center w-20 h-20 rounded-full bg-primary/10">
+        <Sparkles className="h-10 w-10 text-primary animate-spin-slow" />
+      </div>
+      <h2 className="mt-6 text-2xl font-display font-semibold text-center text-primary">
+        Loading your Courses...
+      </h2>
+      <p className="mt-2 text-muted-foreground text-sm">
+        Preparing your learning journey ✨
+      </p>
     </div>
   )
 }

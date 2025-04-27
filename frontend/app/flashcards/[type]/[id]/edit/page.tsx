@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { ArrowLeft, BookOpen, GripVertical, Save, Trash2, X, Zap } from "lucide-react"
+import { ArrowLeft, BookOpen, GripVertical, Save, Sparkles, Trash2, X, Zap } from "lucide-react"
 import {
   DndContext,
   closestCenter,
@@ -24,6 +24,8 @@ import {
   useSortable,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+import { supabase } from "@/lib/supabaseClient"
+import { backendUrl } from "@/lib/backendUrl"
 
 function SortableCard({
   id,
@@ -101,6 +103,7 @@ function SortableCard({
 }
 
 export default function EditFlashcardsPage() {
+  const [pageLoading, setPageLoading] = useState(true);
   const params = useParams() as { type: string; id: string } ;
   const router = useRouter()
   const [title, setTitle] = useState("")
@@ -112,87 +115,36 @@ export default function EditFlashcardsPage() {
   const isCourse = params.type === "course"
 
   useEffect(() => {
-    if (isCourse) {
-      setTitle(
-        params.id === "1"
-          ? "Introduction to Python Programming"
-          : params.id === "2"
-          ? "Web Development Fundamentals"
-          : "Data Science Essentials"
-      )
-      setDescription("Flashcards for course material")
-    } else {
-      setTitle(
-        params.id === "1"
-          ? "JavaScript Promises"
-          : params.id === "2"
-          ? "CSS Grid Layout"
-          : params.id === "3"
-          ? "React Hooks"
-          : "Python List Comprehensions"
-      )
-      setDescription("Flashcards for quick learning session")
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) router.push("/auth")
     }
-
-    const mockFlashcards = isCourse
-      ? [
-          {
-            id: "1",
-            front: "What is a variable in Python?",
-            back: "A variable is a named location in memory that stores a value. In Python, variables are created when you assign a value to them.",
-          },
-          {
-            id: "2",
-            front: "What is the difference between a list and a tuple in Python?",
-            back: "Lists are mutable (can be changed after creation) while tuples are immutable (cannot be changed after creation). Lists use square brackets [] and tuples use parentheses ().",
-          },
-          {
-            id: "3",
-            front: "What is a function in Python?",
-            back: "A function is a block of organized, reusable code that performs a specific task. Functions are defined using the 'def' keyword.",
-          },
-          {
-            id: "4",
-            front: "What is object-oriented programming?",
-            back: "Object-oriented programming (OOP) is a paradigm based on the concept of 'objects', which can contain data and code.",
-          },
-          {
-            id: "5",
-            front: "What is inheritance in OOP?",
-            back: "Inheritance allows a new class (child) to inherit attributes and methods from an existing class (parent).",
-          },
-        ]
-      : [
-          {
-            id: "1",
-            front: "What is a Promise in JavaScript?",
-            back: "A Promise is an object representing the eventual completion or failure of an async operation.",
-          },
-          {
-            id: "2",
-            front: "What are the three states of a Promise?",
-            back: "Pending, Fulfilled, Rejected.",
-          },
-          {
-            id: "3",
-            front: "How do you create a new Promise?",
-            back: "Using new Promise((resolve, reject) => { ... })",
-          },
-          {
-            id: "4",
-            front: "What is the purpose of the .then() method?",
-            back: ".then() specifies what to do when the Promise is fulfilled.",
-          },
-          {
-            id: "5",
-            front: "What is the purpose of the .catch() method?",
-            back: ".catch() handles errors in the Promise chain.",
-          },
-        ]
-
-    setFlashcards(mockFlashcards)
-    titleInputRef.current?.focus()
-  }, [isCourse, params.id])
+    const fetchFlashcardSet = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push("/auth")
+        return
+      }
+      const token = session.access_token
+  
+      try {
+        const res = await fetch(`${backendUrl}/api/flashcards/${params.type}/${params.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const { flashcard_set } = await res.json()  // <- extract flashcard_set
+  
+        setTitle(flashcard_set.title || "")
+        setDescription(flashcard_set.description || "")
+        setFlashcards(flashcard_set.flashcards?.flashcards || [])
+      } catch (error) {
+        console.error("Error fetching flashcard set:", error)
+      }
+    }
+    checkAuth()
+    Promise.all([
+      fetchFlashcardSet()
+    ]).finally(() => setPageLoading(false));
+  }, [params.type, params.id, router])  
 
   const handleAddCard = () => {
     const newCard = {
@@ -227,11 +179,42 @@ export default function EditFlashcardsPage() {
     setFlashcards(arrayMove(flashcards, oldIndex, newIndex))
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaving(true)
-    setTimeout(() => {
+  
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push("/auth")
+        return
+      }
+      const token = session.access_token
+  
+      const payload = {
+        title,
+        description,
+        flashcards,
+      }
+  
+      await fetch(`${backendUrl}/api/flashcards/update_set/${params.type}/${params.id}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      })
+  
       router.push(`/flashcards/${params.type}/${params.id}`)
-    }, 1000)
+    } catch (error) {
+      console.error("Error saving flashcard set:", error)
+    } finally {
+      setIsSaving(false)
+    }
+  }  
+
+  if (pageLoading){
+    return (<AppShell><DashboardLoading/></AppShell>)
   }
 
   return (
@@ -335,5 +318,21 @@ export default function EditFlashcardsPage() {
         </div>
       </div>
     </AppShell>
+  )
+}
+
+function DashboardLoading() {
+  return (
+    <div className="flex flex-col justify-center items-center min-h-[80vh] animate-fade-in">
+      <div className="flex items-center justify-center w-20 h-20 rounded-full bg-primary/10">
+        <Sparkles className="h-10 w-10 text-primary animate-spin-slow" />
+      </div>
+      <h2 className="mt-6 text-2xl font-display font-semibold text-center text-secondary">
+        Loading your Edit page...
+      </h2>
+      <p className="mt-2 text-muted-foreground text-sm">
+        Preparing your learning journey ✨
+      </p>
+    </div>
   )
 }

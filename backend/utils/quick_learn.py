@@ -12,17 +12,20 @@ google_key = os.getenv("GOOGLE_API_KEY")
 client = genai.Client(api_key=google_key)
 
 # --- Pydantic Models ---
-
+class Resource(BaseModel):
+    unit_title: str
+    text: str  # Example: "Official Python Documentation"
+    url: str   # Example: "https://docs.python.org/3/"
+    
 class QLesson(BaseModel):
     title: str
     duration_minutes: int
     topics: List[str]
 
 class QLessonContent(BaseModel):
-    readings: List[str]
-    examples: List[str]
-    QAssessments: List[str]
-    additional_resources: List[str]
+    readings: str
+    examples: str
+    additional_resources: List[Resource]
 
 class QGradedQuestion(BaseModel):
     question: str
@@ -80,22 +83,12 @@ def generate_quick_learn(topic: str, difficulty: str) -> dict:
         sections = []
         for idx, (lesson, lesson_detail) in enumerate(zip(validated_content.lessons, validated_content.lesson_content)):
             section_id = str(uuid.uuid4())  # or slugify(lesson.title)
-            # Merge readings, examples, assessments into one Markdown string
-            content_blocks = []
-            if lesson_detail.readings:
-                content_blocks.append("## Readings\n" + "\n\n".join(lesson_detail.readings))
-            if lesson_detail.examples:
-                content_blocks.append("## Examples\n" + "\n\n".join(lesson_detail.examples))
-            if lesson_detail.QAssessments:
-                content_blocks.append("## Practice Questions\n" + "\n\n".join(lesson_detail.QAssessments))
-            if lesson_detail.additional_resources:
-                content_blocks.append("## Additional Resources\n" + "\n\n".join(lesson_detail.additional_resources))
-            combined_content = "\n\n".join(content_blocks)
-
             sections.append({
                 "id": section_id,
                 "title": lesson.title,
-                "content": combined_content
+                "readings": lesson_detail.readings,
+                "examples": lesson_detail.examples,
+                "additional_resources": lesson_detail.additional_resources
             })
 
         # Transform assessment questions

@@ -9,6 +9,7 @@ import {
   Search,
   BookOpen,
   Filter,
+  Sparkles,
 } from "lucide-react"
 import { parseISO, formatDistanceToNowStrict } from "date-fns"
 
@@ -23,7 +24,6 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Progress } from "@/components/ui/progress"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -31,6 +31,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
 import { supabase } from "@/lib/supabaseClient"
+import { backendUrl } from "@/lib/backendUrl"
 
 type QuickLearnSession = {
   id: string
@@ -54,6 +55,7 @@ type SortOption =
   | "lastAccessed_desc"
 
 export default function QuickLearnPage() {
+  const [pageLoading, setPageLoading] = useState(true)
   const [sessions, setSessions] = useState<QuickLearnSession[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [sortOption, setSortOption] = useState<SortOption>("lastAccessed_desc")
@@ -91,7 +93,7 @@ export default function QuickLearnPage() {
     
         const token = session.access_token
     
-        const response = await fetch('http://localhost:8080/api/quick_learns', {
+        const response = await fetch(`${backendUrl}/api/quick_learns`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -132,7 +134,9 @@ export default function QuickLearnPage() {
       }
     }    
     checkAuth()
+    Promise.all([
     fetchSessions()
+    ]).finally(() => setPageLoading(false));
   }, [router])
 
   const filteredAndSortedSessions = useMemo(() => {
@@ -165,6 +169,10 @@ export default function QuickLearnPage() {
   }, [sessions, searchTerm, sortOption])  
 
   console.log(filteredAndSortedSessions)
+
+  if (pageLoading){
+    return (<AppShell><DashboardLoading></DashboardLoading></AppShell>)
+  }
 
   return (
     <div className="flex-1 w-full mx-auto">
@@ -320,6 +328,22 @@ export default function QuickLearnPage() {
           </div>
         </div>
       </AppShell>
+    </div>
+  )
+}
+
+function DashboardLoading() {
+  return (
+    <div className="flex flex-col justify-center items-center min-h-[80vh] animate-fade-in">
+      <div className="flex items-center justify-center w-20 h-20 rounded-full bg-secondary/10">
+        <Sparkles className="h-10 w-10 text-secondary animate-spin-slow" />
+      </div>
+      <h2 className="mt-6 text-2xl font-display font-semibold text-center text-secondary">
+        Loading your Quick Learns...
+      </h2>
+      <p className="mt-2 text-muted-foreground text-sm">
+        Preparing your learning journey ✨
+      </p>
     </div>
   )
 }

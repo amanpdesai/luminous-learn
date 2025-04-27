@@ -1,51 +1,137 @@
 "use client"
+
+import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
+import Link from "next/link"
 import { AppShell } from "@/components/layout/app-shell"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { ArrowLeft, BookOpen, Check, Edit, Layers, Zap } from "lucide-react"
-import Link from "next/link"
+import { ArrowLeft, BookOpen, Check, Edit, Layers, Sparkles, Zap } from "lucide-react"
+import { supabase } from "@/lib/supabaseClient"
+import { format } from "date-fns"
+import { backendUrl } from "@/lib/backendUrl"
+
+// Types
+interface Flashcard {
+  id: string
+  front: string
+  back: string
+  correct: number
+  incorrect: number
+}
+
+interface FlashcardSet {
+  id: string
+  title: string
+  created_at: string
+  sessions_completed: number
+  last_test_score: number
+  flashcards: {
+    flashcards: Flashcard[]
+  } | null
+}
+
+interface FetchFlashcardSetResponse {
+  flashcard_set: FlashcardSet
+}
 
 export default function FlashcardSetPage() {
-  const params = useParams() as { type: string; id: string } ;
+  const [pageLoading, setPageLoading] = useState(true)
+  const params = useParams() as { type: string; id: string }
   const router = useRouter()
+  
+  const [flashcards, setFlashcards] = useState<Flashcard[]>([])
+  const [flashcardSet, setFlashcardSet] = useState<FlashcardSet | null>(null)
 
-  // Determine if this is a course or quick learn flashcard set
   const isCourse = params.type === "course"
 
-  // Get title based on type and ID
-  const getTitle = () => {
-    if (isCourse) {
-      return params.id === "1"
-        ? "Introduction to Python Programming"
-        : params.id === "2"
-          ? "Web Development Fundamentals"
-          : "Data Science Essentials"
-    } else {
-      return params.id === "1"
-        ? "JavaScript Promises"
-        : params.id === "2"
-          ? "CSS Grid Layout"
-          : params.id === "3"
-            ? "React Hooks"
-            : "Python List Comprehensions"
+  useEffect(() => {
+    const fetchFlashcards = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          console.error("[No active session]")
+          router.push("/auth") // or wherever your login page is
+          return
+        }
+
+        const token = session.access_token
+
+        const url = `${backendUrl}/api/flashcards/${params.type}/${params.id}`
+        console.log("Fetching flashcards:", url)
+
+        const res = await fetch(url, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+
+        if (!res.ok) {
+          throw new Error(`Failed to fetch flashcards. Status: ${res.status}`)
+        }
+
+        const data: FetchFlashcardSetResponse = await res.json()
+
+        Promise.all([
+          setFlashcards(data.flashcard_set.flashcards?.flashcards || []),
+          setFlashcardSet(data.flashcard_set)
+        ]).finally(() => setPageLoading(false));
+      } catch (err) {
+        console.error("[Error fetching flashcards]", err)
+      }
     }
-  }
 
-  const title = getTitle()
+    fetchFlashcards()
+  }, [params.type, params.id, router])
+  
+  let stillLearning = 0
+  let stillStudying = 0
+  let mastered = 0
 
-  // Mock progress data
-  const progressData = {
-    stillLearning: 2,
-    stillStudying: 1,
-    mastered: 2,
-    total: 5,
-  }
+  flashcards.forEach((card) => {
+    const correct = card.correct ?? 0
+    const incorrect = card.incorrect ?? 0
+    const totalAttempts = correct + incorrect
+
+    if (totalAttempts === 0) {
+      stillLearning += 1
+    } else {
+      const accuracy = correct / totalAttempts
+
+      if (accuracy < 0.5) {
+        stillLearning += 1
+      } else if (accuracy < 0.85) {
+        stillStudying += 1
+      } else {
+        if (correct >= 3) {
+          mastered += 1
+        } else {
+          stillStudying += 1
+        }
+      }
+    }
+  })
+
+const progressData = {
+  stillLearning,
+  stillStudying,
+  mastered,
+  total: flashcards.length,
+}
+
+
+  if (pageLoading) {
+    return (
+      <AppShell>
+        <DashboardLoading/>
+      </AppShell>
+    )
+  }  
 
   return (
     <AppShell>
-      <div className="space-y-8 max-w-4xl mx-auto mb-10">
+      <div className="space-y-10 max-w-5xl mx-auto mb-20 px-6 w-full"> 
         <div className="mb-6 mt-12">
           <Link
             href="/flashcards"
@@ -72,8 +158,10 @@ export default function FlashcardSetPage() {
                   </>
                 )}
               </div>
-              <h1 className="text-3xl font-display glow-text">{title}</h1>
-              <p className="text-muted-foreground mt-1">Created on April 24, 2025</p>
+              <h1 className="text-3xl font-display glow-text">{flashcardSet?.title}</h1>
+              <p className="text-muted-foreground mt-1">
+                Created on {flashcardSet?.created_at ? format(new Date(flashcardSet.created_at), "PPP") : "Unknown"}
+              </p>
             </div>
 
             <Button
@@ -86,9 +174,10 @@ export default function FlashcardSetPage() {
             </Button>
           </div>
 
+          {/* 3 Main Action Buttons */}
           <div className="grid gap-4 md:grid-cols-3">
             <Button
-              className={`h-auto py-6 glow-button${isCourse ? "": "-pink"} flex flex-col items-center justify-center gap-2`}
+              className={`h-auto py-6 glow-button${isCourse ? "" : "-pink"} flex flex-col items-center justify-center gap-2`}
               variant={isCourse ? "default" : "secondary"}
               onClick={() => router.push(`/flashcards/${params.type}/${params.id}/flashcards`)}
             >
@@ -98,7 +187,7 @@ export default function FlashcardSetPage() {
             </Button>
 
             <Button
-              className={`h-auto py-6 glow-button${isCourse ? "": "-pink"} flex flex-col items-center justify-center gap-2`}
+              className={`h-auto py-6 glow-button${isCourse ? "" : "-pink"} flex flex-col items-center justify-center gap-2`}
               variant={isCourse ? "default" : "secondary"}
               onClick={() => router.push(`/flashcards/${params.type}/${params.id}/learn`)}
             >
@@ -108,7 +197,7 @@ export default function FlashcardSetPage() {
             </Button>
 
             <Button
-              className={`h-auto py-6 glow-button${isCourse ? "": "-pink"} flex flex-col items-center justify-center gap-2`}
+              className={`h-auto py-6 glow-button${isCourse ? "" : "-pink"} flex flex-col items-center justify-center gap-2`}
               variant={isCourse ? "default" : "secondary"}
               onClick={() => router.push(`/flashcards/${params.type}/${params.id}/test`)}
             >
@@ -118,10 +207,11 @@ export default function FlashcardSetPage() {
             </Button>
           </div>
 
-          <Card className="border-border/50">
+          {/* Set Stats */}
+          <Card className="border-border/50 w-full">
             <CardContent className="space-y-8">
               <h2 className="text-lg font-medium mb-4">Set Stats</h2>
-              {/* Stats Row */}
+
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
                 <div className="p-4 bg-muted/30 rounded-md">
                   <div className="flex items-center justify-center gap-2 text-foreground text-lg font-semibold">
@@ -134,7 +224,7 @@ export default function FlashcardSetPage() {
                 <div className="p-4 bg-muted/30 rounded-md">
                   <div className="flex items-center justify-center gap-2 text-blue-500 text-lg font-semibold">
                     <BookOpen className="h-5 w-5" />
-                    3
+                    {flashcardSet?.sessions_completed ?? 0}
                   </div>
                   <div className="text-sm text-muted-foreground mt-1">Learns Completed</div>
                 </div>
@@ -142,12 +232,14 @@ export default function FlashcardSetPage() {
                 <div className="p-4 bg-muted/30 rounded-md">
                   <div className="flex items-center justify-center gap-2 text-green-500 text-lg font-semibold">
                     <Check className="h-5 w-5" />
-                    80%
+                    {flashcardSet?.last_test_score ?? 0}%
                   </div>
                   <div className="text-sm text-muted-foreground mt-1">Last Test Score</div>
                 </div>
               </div>
+
               <h2 className="text-lg font-medium mb-4">Progress Breakdown</h2>
+
               {/* Progress Bars */}
               <div className="space-y-6">
                 <div className="space-y-2">
@@ -187,40 +279,51 @@ export default function FlashcardSetPage() {
           </Card>
 
           {/* Terms in this Set */}
-          <Card className="border-border/50">
+          <Card className="border-border/50 w-full">
             <CardContent className="space-y-4">
-              <h2 className="text-lg font-medium mb-4">Terms in this Set ({progressData.total})</h2>
-              
-              {/* Replace with dynamic list later */}
-              {[
-                { term: "Design", definition: "making useful and usable things for people" },
-                { term: "Interface", definition: "user-facing layer that allows them to interact with computers, allow people to accomplish tasks" },
-                { term: "Is the user always right?", definition: "No" },
-                { term: "Design as a process", definition: "1. Needfinding (observing people, understanding problem, defining constraints)\n2. Ideating (creating list of solutions)\n3. Prototyping (low-fi, digital, app)\n4. Testing (user evaluations)" },
-                { term: "Design principles", definition: "10 Principles of Good Design (Dieter Rams), 8 Golden Rules of Interface Design (Ben Schneiderman), 10 Usability Heuristics for UI Design (Norman Nielsen Group)" },
-              ].map((item, index) => (
-                <div
-                  key={index}
-                  className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border border-border rounded-md bg-muted/40 p-4"
-                >
-                  {/* Front (term) */}
-                  <div className="sm:w-1/3 font-medium text-sm text-muted-foreground">
-                    {item.term}
-                  </div>
+              <h2 className="text-lg font-medium mb-4">Terms in this Set ({flashcards.length})</h2>
 
-                  {/* Separator */}
-                  <div className="hidden sm:block w-px bg-border h-full" />
-
-                  {/* Back (definition) */}
-                  <div className="sm:w-2/3 text-foreground text-sm whitespace-pre-line">
-                    {item.definition}
+              {Array.isArray(flashcards) && flashcards.length > 0 ? (
+                flashcards.map((card, index) => (
+                  <div
+                    key={card.id || index}
+                    className="flex flex-col md:flex-row md:items-stretch md:justify-start gap-6 border border-border rounded-lg bg-muted/30 p-6"
+                  >
+                    <div className="flex-1 pr-6 border-r border-border">
+                      <div className="font-semibold text-foreground text-base whitespace-pre-line">
+                        {card.front}
+                      </div>
+                    </div>
+                    <div className="flex-1 pl-6">
+                      <div className="text-foreground text-base whitespace-pre-line">
+                        {card.back}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-center text-muted-foreground">No flashcards created yet.</p>
+              )}
             </CardContent>
           </Card>
         </div>
       </div>
     </AppShell>
+  )
+}
+
+function DashboardLoading() {
+  return (
+    <div className="flex flex-col justify-center items-center min-h-[80vh] animate-fade-in">
+      <div className="flex items-center justify-center w-20 h-20 rounded-full bg-primary/10">
+        <Sparkles className="h-10 w-10 text-primary animate-spin-slow" />
+      </div>
+      <h2 className="mt-6 text-2xl font-display font-semibold text-center text-primary">
+        Loading your Flashcard Set...
+      </h2>
+      <p className="mt-2 text-muted-foreground text-sm">
+        Preparing your learning journey ✨
+      </p>
+    </div>
   )
 }

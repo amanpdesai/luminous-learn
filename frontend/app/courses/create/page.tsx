@@ -15,9 +15,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { AppShell } from "@/components/layout/app-shell"
 import { supabase } from "@/lib/supabaseClient"
 import Link from "next/link"
-import tempData from "../../../../backend/temp/test_course.json"
+import { backendUrl } from "@/lib/backendUrl"
 
 export default function CreateCoursePage() {
+  const [pageLoading, isPageLoading] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
   const [generationStep, setGenerationStep] = useState(0)
   const router = useRouter()
@@ -34,18 +35,19 @@ export default function CreateCoursePage() {
     }
 
     checkAuth()
+    isPageLoading(false)
   }, [router])
 
   const steps = [
     "Analyzing Topic Complexity",
-    "Designing Curriculum Structure",
-    "Generating Educational Hierarchy",
+    "Designing Units Outline",
+    "Generating Lessons and Descriptions",
     "Creating Learning Objectives",
   ]
 
   const simulateLLMCall = async (topic: string, difficulty: string, depth: string) => {
     try {
-      const apiCall = fetch("http://localhost:8080/api/generate_syllabus", {
+      const apiCall = fetch(`${backendUrl}/api/generate_syllabus`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topic, difficulty, depth }),
@@ -78,6 +80,10 @@ export default function CreateCoursePage() {
     simulateLLMCall(topicInput, difficultyInput, depthInput)
   }
 
+  if (pageLoading) {
+    return (<AppShell><DashboardLoading></DashboardLoading></AppShell>)
+  }
+
   if (isGenerating) {
     return (
       <AppShell>
@@ -86,7 +92,7 @@ export default function CreateCoursePage() {
             <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
               <Sparkles className="h-8 w-8 text-primary" />
             </div>
-            <h1 className="text-3xl font-display glow-text">Creating Your Course</h1>
+            <h1 className="text-3xl font-display glow-text">Creating Your Syllabus</h1>
             <div className="w-full max-w-md space-y-6">
               {steps.map((step, index) => (
                 <div key={index} className="flex items-center gap-3">
@@ -126,7 +132,7 @@ export default function CreateCoursePage() {
         </div>
 
         <Card className="border-border/50">
-          <CardContent className="p-6 sm:p-8">
+          <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-1">
                 <Label htmlFor="topic" className="text-base">What would you like to learn?</Label>
@@ -240,5 +246,21 @@ function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M20 6 9 17l-5-5" />
     </svg>
+  )
+}
+
+function DashboardLoading() {
+  return (
+    <div className="flex flex-col justify-center items-center min-h-[80vh] animate-fade-in">
+      <div className="flex items-center justify-center w-20 h-20 rounded-full bg-primary/10">
+        <Sparkles className="h-10 w-10 text-primary animate-spin-slow" />
+      </div>
+      <h2 className="mt-6 text-2xl font-display font-semibold text-center text-primary">
+        Loading your Create page...
+      </h2>
+      <p className="mt-2 text-muted-foreground text-sm">
+        Preparing your learning journey ✨
+      </p>
+    </div>
   )
 }

@@ -6,17 +6,30 @@ import { AppShell } from "@/components/layout/app-shell"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, FileText, Lightbulb, List, Video } from "lucide-react"
+import { ArrowLeft, ArrowRight, BookOpen, Check, CheckCircle2, FileText, Lightbulb, List, Sparkles, Video } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { MarkdownRenderer } from "@/components/ui/markdown-render"
 import TurndownService from "turndown"
 import { supabase } from "@/lib/supabaseClient"
+import { backendUrl } from "@/lib/backendUrl"
 
 // Type definitions for the course data structure
 type Resource = {
   unit_title: string
   text: string
   url: string
+}
+
+interface Question {
+  question: string;
+  answer_choices: string[];
+  correctAnswer: number;
+}
+
+interface Assessment {
+  title: string;
+  instructions?: string;
+  questions: Question[];
 }
 
 type LessonComplete = {
@@ -27,7 +40,7 @@ type LessonComplete = {
   readings: string
   examples: string
   exercises: string
-  assessments: string
+  assessments: QuizQuestion
   additional_resources: Resource[]
   duration_in_min: string
   status: string
@@ -44,6 +57,7 @@ type Unit = {
   title: string
   unit_description: string
   lesson_outline: LessonOutline[]
+  unit_assessment: Assessment
 }
 
 type Course = {
@@ -67,8 +81,8 @@ type Course = {
 // Type for quiz questions
 type QuizQuestion = {
   question: string
-  options: string[]
-  correctAnswer: number
+  answer_choices: string[]
+  answer: string
 }
 
 // Type for fallback lesson data
@@ -93,7 +107,7 @@ type LessonData = {
   unit: {
     id: string | string[]
     title: string
-    lessons: any[]
+    lessons: (LessonComplete | FallbackLesson)[]
   }
   content: string
   video: {
@@ -105,11 +119,13 @@ type LessonData = {
     url: string
     type: string
   }[]
-  quiz: QuizQuestion[]
+  quiz: QuizQuestion
 }
 
 export default function ModulePage() {
+  const [pageLoading, setPageLoading] = useState(true)
   const params = useParams()
+  const [isMarkComplete, setIsMarkComplete] = useState(false)
   const router = useRouter()
   // Convert params to strings to prevent type errors
   const courseId = Array.isArray(params.courseId) ? params.courseId[0] : params.courseId || ""
@@ -124,6 +140,13 @@ export default function ModulePage() {
 
   // Fetch course and lesson data
   useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push("/auth")
+        return
+      }
+    }
     const fetchCourseAndLesson = async () => {
       setLoading(true)
       
@@ -141,7 +164,7 @@ export default function ModulePage() {
       
       try {
         // Fetch the course data
-        const response = await fetch(`http://localhost:8080/api/get_user_course?course_id=${courseId}`, {
+        const response = await fetch(`${backendUrl}/api/get_user_course?course_id=${courseId}`, {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${token}`,
@@ -187,13 +210,14 @@ export default function ModulePage() {
       }
     }
     
-    if (courseId && unitId && lessonId) {
-      fetchCourseAndLesson()
-    }
+    checkAuth()
+    Promise.all([
+        fetchCourseAndLesson()
+    ]).finally(() => setPageLoading(false));
   }, [courseId, unitId, lessonId, router])
 
   // Mock lessons data for fallback
-  const [fallbackLessons, setFallbackLessons] = useState<FallbackLesson[]>([
+  const [fallbackLessons] = useState<FallbackLesson[]>([
     {
       id: 1,
       title: "Installing Python and Setting Up the Development Environment",
@@ -271,31 +295,22 @@ export default function ModulePage() {
                 type: "documentation",
               },
             ],
-        quiz: [
-          // Mock quiz data - in a real application, you would retrieve quiz data from the backend
-          {
-            question: "Which of the following statements about this lesson is true?",
-            options: ["Option A", "Option B", "Option C", "Option D"],
-            correctAnswer: 1,
-          },
-          {
-            question: "What is the main topic covered in this lesson?",
-            options: ["Topic 1", "Topic 2", "Topic 3", "Topic 4"],
-            correctAnswer: 0,
-          },
-        ],
+        quiz: {
+          question: "Which of the following statements about this lesson is true?",
+          answer_choices: ["Option A", "Option B", "Option C", "Option D"],
+          answer: "Option A",
+        },
       };
     } else {
-      // Find the unit (with proper type checking)
       const currentUnit = course.units.find(u => u.unit_number.toString() === unitId);
       if (!currentUnit) {
         throw new Error("Unit not found");
       }
-
+  
       return {
         id: currentLessonData.lesson || lessonId,
         title: currentLessonData.lesson || "Lesson",
-        type: "lesson", // Default to lesson type if not specified
+        type: "lesson",
         duration: currentLessonData.duration_in_min ? `${currentLessonData.duration_in_min} min` : "15 min",
         course: {
           id: courseId,
@@ -308,7 +323,7 @@ export default function ModulePage() {
         },
         content: currentLessonData.readings || "",
         video: {
-          url: "https://www.youtube.com/embed/YYXdXT2l-Gg", // Default video URL
+          url: "https://www.youtube.com/embed/YYXdXT2l-Gg",
           title: currentLessonData.lesson || "Tutorial",
         },
         resources: (currentLessonData.additional_resources || []).map((resource: Resource) => ({
@@ -316,19 +331,11 @@ export default function ModulePage() {
           url: resource.url,
           type: "documentation",
         })),
-        quiz: [
-          // Mock quiz data since we don't have actual quiz content
-          {
-            question: "Which of the following statements about this lesson is true?",
-            options: ["Option A", "Option B", "Option C", "Option D"],
-            correctAnswer: 1,
-          },
-          {
-            question: "What is the main topic covered in this lesson?",
-            options: ["Topic 1", "Topic 2", "Topic 3", "Topic 4"],
-            correctAnswer: 0,
-          },
-        ],
+        quiz: currentLessonData.assessments || {
+          question: "Which of the following statements about this lesson is true?",
+          answer_choices: ["Option A", "Option B", "Option C", "Option D"],
+          correctAnswer: 1,
+        },
       };
     }
   };
@@ -364,77 +371,100 @@ export default function ModulePage() {
   }
 
   const handleQuizSubmit = () => {
-    let correctCount = 0
-    lesson.quiz.forEach((question: QuizQuestion, index: number) => {
-      if (quizAnswers[index] === question.correctAnswer) {
-        correctCount++
-      }
-    })
+    if (!currentLessonData?.assessments) {
+      return
+    }
 
-    const score = Math.round((correctCount / lesson.quiz.length) * 100)
+    let correctCount = 0
+    console.log("QUIZ ANSWERS")
+    console.log(quizAnswers)
+    if (currentLessonData.assessments.answer_choices[quizAnswers[0]] === currentLessonData.assessments.answer) {
+      correctCount++
+    }
+
+    const score = correctCount === 1 ? 100 : 0;
     setQuizScore(score)
     setQuizSubmitted(true)
-
-    if (score >= 70) {
-      markComplete()
-    }
   }
 
-  const markComplete = async () => {
-    // Already marked as complete
-    if (isCompleted) return;
-    
-    setIsCompleted(true);
-    
-    // In a real application, you would update the status in your backend
+  const markComplete = async (lessonTitle: string) => {
+    if (isCompleted || !course) return;
     try {
-      // Get current user session
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      
-      const token = session.access_token;
-      if (!token) return;
-      
-      // Call backend API to update lesson status (this is a mock endpoint - implement the actual endpoint)
-      // You would need to implement this API endpoint in your backend
-      /* 
-      await fetch(`http://localhost:8080/api/update_lesson_status`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          course_id: courseId,
-          unit_id: unitId,
-          lesson_id: lessonId,
-          status: "completed",
-        }),
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      const user = session.data.session?.user;
+      if (!user || !token) throw new Error("Not logged in");
+  
+      // Clone the unit_lessons array
+      const updatedLessons = course.unit_lessons.map((lesson) => {
+        if (lesson.lesson === lessonTitle) {
+          // Update the matching lesson's status
+          return { ...lesson, status: "completed" };
+        }
+        return lesson;
       });
-      */
-      
-      // Update local state
-      if (currentLessonData) {
-        setCurrentLessonData({
-          ...currentLessonData,
-          status: "completed",
-        });
-      }
-      
-      console.log("Lesson marked as complete");
-    } catch (error) {
-      console.error("Error marking lesson as complete:", error);
-      setIsCompleted(false); // Revert UI state if update fails
+  
+      const courseData = {
+        unit_lessons: updatedLessons,
+        completed: course.completed + 1
+      };
+  
+      const response = await fetch(`${backendUrl}/api/update_draft/${course.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(courseData),
+      });
+  
+      if (!response.ok) throw new Error("Failed to update lesson");
+
+      setIsMarkComplete(true)
+  
+      // Optional: Update local course state if needed
+      // setCourse(prev => prev ? { ...prev, unit_lessons: updatedLessons } : null);
+  
+      console.log("Lesson marked as completed!");
+      setIsCompleted(true);
+    } catch (err) {
+      console.error("Error marking lesson as complete:", err);
+      alert("Failed to update lesson. Please try again.");
     }
-  }
+  };
 
   // Calculate current lesson index and navigation links
   const currentLessonIndex = parseInt(lessonId as string)
   const totalLessons = unitLessons.length || fallbackLessons.length
+
+  let getCompletedRemaining = (course: Course | null, unitIndex: number) => {
+    if (!course) return 0;
+  
+    const totalCompleted = course.completed || 0;
+  
+    // Sum up the lessons in all previous units
+    const lessonsBeforeThisUnit = course.units
+      .slice(0, unitIndex) // Take all units before this one
+      .reduce((sum, unit) => sum + (unit.lesson_outline?.length || 0), 0);
+  
+    // Completed remaining for this unit
+    const completedRemaining = totalCompleted - lessonsBeforeThisUnit;
+  
+    // It can't be negative (if somehow more completed than exist)
+    return Math.max(0, completedRemaining);
+  };
+  
+
+  let completedRemaining = getCompletedRemaining(course, parseInt(unitId) - 1);
   
   // Previous and next module links
   const prevModule = currentLessonIndex > 0 ? { id: currentLessonIndex - 1 } : null
   const nextModule = currentLessonIndex < totalLessons - 1 ? { id: currentLessonIndex + 1 } : null
+
+  if (pageLoading){
+    return (<AppShell><DashboardLoading></DashboardLoading></AppShell>);
+  }
+  console.log(lesson.quiz)
 
   return (
     <AppShell>
@@ -443,14 +473,14 @@ export default function ModulePage() {
         <div className="bg-muted/20 border-b border-border/40 py-4">
           <div className="px-4 lg:px-8 py-6 w-full">
             <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
                 <Link href={`/courses/${courseId}`} className="hover:text-foreground transition-colors">
                   {lesson.course.title}
                 </Link>
                 <span>/</span>
                 <span>{lesson.unit.title}</span>
               </div>
-              <h1 className="text-xl md:text-2xl font-display">{lesson.title}</h1>
+              <h1 className="text-xl md:text-2xl font-display mb-3">{lesson.title}</h1>
               <div className="flex flex-wrap gap-3 text-sm">
                 <div className="flex items-center gap-2">
                   {lesson.type === "video" ? (
@@ -486,7 +516,7 @@ export default function ModulePage() {
               <div className="sticky top-24 space-y-4">
                 <h3 className="font-medium">Unit Lessons</h3>
                 <ul className="space-y-2">
-                  {(unitLessons.length > 0 ? unitLessons : fallbackLessons).map((m: any, index: number) => (
+                  {(unitLessons.length > 0 ? unitLessons : fallbackLessons).map((m: LessonComplete | FallbackLesson, index: number) => (
                     <li key={index}>
                       <Link
                         href={`/courses/${params.courseId}/lesson/${params.unitId}/${index}`}
@@ -496,10 +526,12 @@ export default function ModulePage() {
                             : "hover:bg-muted/50"
                         }`}
                       >
-                        <span className="h-5 aspect-square rounded-full bg-muted/70 flex items-center justify-center text-xs font-medium">
-                          {index + 1}
+                        <span className="h-5 w-5 rounded-full bg-muted/70 flex items-center justify-center text-xs font-medium">
+                          {completedRemaining >= index + 1 || (isMarkComplete && index === parseInt(lessonId)) ? <Check className="h-4 w-4 text-green-400" /> : <>{index + 1}</>}
                         </span>
-                        <span className="whitespace-normal break-words leading-snug">{m.lesson || m.title}</span>
+                        <span className="whitespace-normal break-words leading-snug">
+                          {'lesson' in m ? m.lesson : m.title}
+                        </span>
                       </Link>
                     </li>
                   ))}
@@ -510,37 +542,39 @@ export default function ModulePage() {
             {/* Main content area */}
             <div className="flex-1 min-w-0 mr-12">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                <TabsList className="ml-8 w-full max-w-lg px-1 py-5 bg-card border border-border rounded-full mb-6 z-10 relative shadow-sm flex gap-1">
+                <TabsList className="ml-8 w-full max-w-lg px-1 py-5 bg-muted/20 border border-border rounded-full mb-6 z-10 relative shadow-sm flex gap-1">
                   <TabsTrigger
                     value="content"
                     className="flex-1 px-10 py-4 text-base font-medium rounded-full transition-all
                       text-muted-foreground hover:text-foreground
-                      [data-state='active']:text-white
-                      [data-state='active']:bg-primary/60
-                      [data-state='active']:shadow
-                      [data-state='active']:glow-text"
+                      data-[state=active]:text-white
+                      data-[state=active]:bg-primary
+                      data-[state=active]:shadow
+                      data-[state=active]:glow-text"
                   >
                     {lesson.type === "video" ? "Video" : "Content"}
                   </TabsTrigger>
+
                   <TabsTrigger
                     value="quiz"
                     className="flex-1 px-7 py-4 text-base font-medium rounded-full transition-all
                       text-muted-foreground hover:text-foreground
-                      [data-state='active']:text-white
-                      [data-state='active']:bg-primary/60
-                      [data-state='active']:shadow
-                      [data-state='active']:glow-text"
+                      data-[state=active]:text-white
+                      data-[state=active]:bg-primary
+                      data-[state=active]:shadow
+                      data-[state=active]:glow-text"
                   >
                     Quiz
                   </TabsTrigger>
+
                   <TabsTrigger
                     value="resources"
                     className="flex-1 px-7 py-4 text-base font-medium rounded-full transition-all
                       text-muted-foreground hover:text-foreground
-                      [data-state='active']:text-white
-                      [data-state='active']:bg-primary/60
-                      [data-state='active']:shadow
-                      [data-state='active']:glow-text"
+                      data-[state=active]:text-white
+                      data-[state=active]:bg-primary
+                      data-[state=active]:shadow
+                      data-[state=active]:glow-text"
                   >
                     Resources
                   </TabsTrigger>
@@ -585,7 +619,7 @@ export default function ModulePage() {
                           Completed
                         </Button>
                       ) : (
-                        <Button onClick={markComplete} className="gap-2">
+                        <Button onClick={() => markComplete(lesson.title)} className="gap-2">
                           <CheckCircle2 className="h-4 w-4" />
                           Mark as Complete
                         </Button>
@@ -599,10 +633,25 @@ export default function ModulePage() {
                           </Link>
                         </Button>
                       ) : (
-                        <Button className="glow-button">
-                          Complete Unit
-                          <CheckCircle2 className="ml-2 h-4 w-4" />
-                        </Button>
+                        parseInt(params.unitId as string) < (course?.units.length || 0) - 1 ? (
+                          <Button
+                            className="glow-button"
+                            onClick={() =>
+                              router.push(`/courses/${params.courseId}/lesson/${(parseInt(params.unitId as string) + 1).toString()}/0`)
+                            }
+                          >
+                            Next Unit
+                            <CheckCircle2 className="ml-2 h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button
+                            className="glow-button"
+                            onClick={() => router.push("/courses")}
+                          >
+                            Back to Courses
+                            <ArrowLeft className="ml-2 h-4 w-4" />
+                          </Button>
+                        )
                       )}
                     </div>
                   </div>
@@ -613,77 +662,71 @@ export default function ModulePage() {
                     <div className="bg-muted/20 p-6 rounded-lg border border-border/40">
                       <h2 className="text-xl font-medium mb-4">Knowledge Check</h2>
                       <p className="mb-6 text-muted-foreground">
-                        Test your understanding of the lesson content with these questions.
+                        Test your understanding of the section content with this question.
                       </p>
-
+      
                       <div className="space-y-8">
-                        {lesson.quiz.map((question: QuizQuestion, qIndex: number) => (
-                          <div key={qIndex} className="space-y-4">
+                      {lesson.quiz && (
+                          <div className="space-y-4">
                             <h3 className="font-medium">
-                              {qIndex + 1}. {question.question}
+                              1. {lesson.quiz.question}
                             </h3>
                             <div className="space-y-2">
-                              {question.options.map((option: string, oIndex: number) => (
+                            {lesson.quiz.answer_choices.map((option, oIndex) => {
+                              const isUserSelected = quizAnswers[0] === oIndex
+                              const isCorrectAnswer = lesson.quiz.answer_choices[oIndex] === lesson.quiz.answer
+                              const isWrongSelected = isUserSelected && !isCorrectAnswer
+
+                              return (
                                 <div
                                   key={oIndex}
-                                  className={`
-                                  flex items-center p-3 rounded-md border border-border/40
-                                  ${!quizSubmitted && quizAnswers[qIndex] === oIndex ? "bg-primary/10 border-primary/50" : ""}
-                                  ${quizSubmitted && oIndex === question.correctAnswer ? "bg-green-500/10 border-green-500/50" : ""}
-                                  ${
-                                    quizSubmitted && quizAnswers[qIndex] === oIndex && oIndex !== question.correctAnswer
-                                      ? "bg-red-500/10 border-red-500/50"
-                                      : ""
-                                  }
-                                  ${quizSubmitted ? "pointer-events-none" : "cursor-pointer hover:bg-muted/30"}
-                                `}
-                                  onClick={() => !quizSubmitted && handleAnswerSelection(qIndex, oIndex)}
+                                  className={`flex items-center p-3 rounded-md border border-border/40 gap-3
+                                    ${quizSubmitted && isCorrectAnswer ? "bg-green-500/10 border-green-500/50" : ""}
+                                    ${quizSubmitted && isWrongSelected ? "bg-red-500/10 border-red-500/50" : ""}
+                                    ${!quizSubmitted && isUserSelected ? "bg-primary/10 border-primary/50" : ""}
+                                    ${quizSubmitted ? "pointer-events-none" : "cursor-pointer hover:bg-muted/30"}
+                                  `}
+                                  onClick={() => !quizSubmitted && handleAnswerSelection(0, oIndex)}
                                 >
+                                  {/* bubble */}
                                   <div
                                     className={`
-                                    h-5 w-5 rounded-full mr-3 flex items-center justify-center border
-                                    ${
-                                      !quizSubmitted && quizAnswers[qIndex] === oIndex
+                                      flex items-center justify-center rounded-full
+                                      h-5 w-5 min-w-[1.25rem] min-h-[1.25rem]
+                                      border
+                                      ${quizSubmitted && isCorrectAnswer
+                                        ? "border-green-500 bg-green-500/20"
+                                        : quizSubmitted && isWrongSelected
+                                        ? "border-red-500 bg-red-500/20"
+                                        : !quizSubmitted && isUserSelected
                                         ? "border-primary bg-primary/20"
                                         : "border-muted-foreground"
-                                    }
-                                    ${
-                                      quizSubmitted && oIndex === question.correctAnswer
-                                        ? "border-green-500 bg-green-500/20"
-                                        : ""
-                                    }
-                                    ${
-                                      quizSubmitted &&
-                                      quizAnswers[qIndex] === oIndex &&
-                                      oIndex !== question.correctAnswer
-                                        ? "border-red-500 bg-red-500/20"
-                                        : ""
-                                    }
-                                  `}
+                                      }
+                                    `}
                                   >
-                                    {(!quizSubmitted && quizAnswers[qIndex] === oIndex) ||
-                                    (quizSubmitted && oIndex === question.correctAnswer) ? (
-                                      <div
-                                        className={`h-2 w-2 rounded-full 
-                                        ${quizSubmitted ? "bg-green-500" : "bg-primary"}`}
-                                      />
+                                    {(quizSubmitted && isCorrectAnswer) || (!quizSubmitted && isUserSelected) ? (
+                                      <div className={`h-2 w-2 rounded-full ${
+                                        quizSubmitted && isCorrectAnswer ? "bg-green-500" : "bg-primary"
+                                      }`} />
                                     ) : null}
                                   </div>
-                                  <span>{option}</span>
+
+                                  {/* text */}
+                                  <span className="text-sm leading-snug break-words">{option}</span>
                                 </div>
-                              ))}
+                              )
+                            })}
                             </div>
                           </div>
-                        ))}
-                      </div>
+                        )}
 
+                      </div>
+      
                       {quizSubmitted ? (
                         <div className="mt-8 p-4 rounded-md bg-muted/30 text-center">
                           <h3 className="text-xl font-medium mb-2">Your Score: {quizScore}%</h3>
                           <p className="mb-4 text-muted-foreground">
-                            {quizScore >= 70
-                              ? "Great job! You've passed the quiz."
-                              : "Review the material and try again to improve your score."}
+                            {"Great job on completing the quiz!"}
                           </p>
                           <Button
                             onClick={() => {
@@ -691,15 +734,15 @@ export default function ModulePage() {
                               setQuizSubmitted(false)
                               setQuizScore(0)
                             }}
+                            className="glow-button bg-primary hover:bg-primary/90"
                           >
                             Retry Quiz
                           </Button>
                         </div>
                       ) : (
                         <Button
-                          className="mt-8 w-full glow-button"
+                          className="mt-8 w-full glow-button bg-primary hover:bg-primary/90"
                           onClick={handleQuizSubmit}
-                          disabled={Object.keys(quizAnswers).length < lesson.quiz.length}
                         >
                           Submit Answers
                         </Button>
@@ -764,5 +807,21 @@ export default function ModulePage() {
         </Button>
       </div>
     </AppShell>
+  )
+}
+
+function DashboardLoading() {
+  return (
+    <div className="flex flex-col justify-center items-center min-h-[80vh] animate-fade-in">
+      <div className="flex items-center justify-center w-20 h-20 rounded-full bg-primary/10">
+        <Sparkles className="h-10 w-10 text-primary animate-spin-slow" />
+      </div>
+      <h2 className="mt-6 text-2xl font-display font-semibold text-center text-primary">
+        Loading your Lesson...
+      </h2>
+      <p className="mt-2 text-muted-foreground text-sm">
+        Preparing your learning journey ✨
+      </p>
+    </div>
   )
 }
