@@ -6,6 +6,18 @@ from routes.course_fetch import course_fetch_bp
 from routes.quick_learn import quick_learn_bp
 from routes.flashcards import flashcards_bp
 
+"""
+This Flask app is now agnostic of uAgents.  Run each agent separately:
+
+    python -m agents.syllabus_agent       # serves on 8010
+    python -m agents.quick_learn_agent    # serves on 8011
+    python -m agents.course_content_agent # serves on 8012
+
+Then start the Flask API:
+
+    python app.py
+"""
+
 app = Flask(__name__)
 
 # Enable CORS for all routes starting with /api
