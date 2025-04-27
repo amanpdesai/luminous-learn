@@ -473,14 +473,14 @@ export default function ModulePage() {
         <div className="bg-muted/20 border-b border-border/40 py-4">
           <div className="px-4 lg:px-8 py-6 w-full">
             <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
                 <Link href={`/courses/${courseId}`} className="hover:text-foreground transition-colors">
                   {lesson.course.title}
                 </Link>
                 <span>/</span>
                 <span>{lesson.unit.title}</span>
               </div>
-              <h1 className="text-xl md:text-2xl font-display">{lesson.title}</h1>
+              <h1 className="text-xl md:text-2xl font-display mb-3">{lesson.title}</h1>
               <div className="flex flex-wrap gap-3 text-sm">
                 <div className="flex items-center gap-2">
                   {lesson.type === "video" ? (
@@ -527,11 +527,11 @@ export default function ModulePage() {
                         }`}
                       >
                         <span className="h-5 w-5 rounded-full bg-muted/70 flex items-center justify-center text-xs font-medium">
-                          {completedRemaining >= index + 1 || isMarkComplete ? <Check className="h-4 w-4 text-green-400" /> : <>{index + 1}</>}
+                          {completedRemaining >= index + 1 || (isMarkComplete && index === parseInt(lessonId)) ? <Check className="h-4 w-4 text-green-400" /> : <>{index + 1}</>}
                         </span>
-                        <span className="whitespace-normal break-words leading-snug">{
-          'lesson' in m ? m.lesson : m.title
-        }</span>
+                        <span className="whitespace-normal break-words leading-snug">
+                          {'lesson' in m ? m.lesson : m.title}
+                        </span>
                       </Link>
                     </li>
                   ))}
@@ -542,37 +542,39 @@ export default function ModulePage() {
             {/* Main content area */}
             <div className="flex-1 min-w-0 mr-12">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                <TabsList className="ml-8 w-full max-w-lg px-1 py-5 bg-card border border-border rounded-full mb-6 z-10 relative shadow-sm flex gap-1">
+                <TabsList className="ml-8 w-full max-w-lg px-1 py-5 bg-muted/20 border border-border rounded-full mb-6 z-10 relative shadow-sm flex gap-1">
                   <TabsTrigger
                     value="content"
                     className="flex-1 px-10 py-4 text-base font-medium rounded-full transition-all
                       text-muted-foreground hover:text-foreground
-                      [data-state='active']:text-white
-                      [data-state='active']:bg-primary/60
-                      [data-state='active']:shadow
-                      [data-state='active']:glow-text"
+                      data-[state=active]:text-white
+                      data-[state=active]:bg-primary
+                      data-[state=active]:shadow
+                      data-[state=active]:glow-text"
                   >
                     {lesson.type === "video" ? "Video" : "Content"}
                   </TabsTrigger>
+
                   <TabsTrigger
                     value="quiz"
                     className="flex-1 px-7 py-4 text-base font-medium rounded-full transition-all
                       text-muted-foreground hover:text-foreground
-                      [data-state='active']:text-white
-                      [data-state='active']:bg-primary/60
-                      [data-state='active']:shadow
-                      [data-state='active']:glow-text"
+                      data-[state=active]:text-white
+                      data-[state=active]:bg-primary
+                      data-[state=active]:shadow
+                      data-[state=active]:glow-text"
                   >
                     Quiz
                   </TabsTrigger>
+
                   <TabsTrigger
                     value="resources"
                     className="flex-1 px-7 py-4 text-base font-medium rounded-full transition-all
                       text-muted-foreground hover:text-foreground
-                      [data-state='active']:text-white
-                      [data-state='active']:bg-primary/60
-                      [data-state='active']:shadow
-                      [data-state='active']:glow-text"
+                      data-[state=active]:text-white
+                      data-[state=active]:bg-primary
+                      data-[state=active]:shadow
+                      data-[state=active]:glow-text"
                   >
                     Resources
                   </TabsTrigger>
@@ -631,10 +633,25 @@ export default function ModulePage() {
                           </Link>
                         </Button>
                       ) : (
-                        <Button className="glow-button">
-                          Complete Unit
-                          <CheckCircle2 className="ml-2 h-4 w-4" />
-                        </Button>
+                        parseInt(params.unitId as string) < (course?.units.length || 0) - 1 ? (
+                          <Button
+                            className="glow-button"
+                            onClick={() =>
+                              router.push(`/courses/${params.courseId}/lesson/${(parseInt(params.unitId as string) + 1).toString()}/0`)
+                            }
+                          >
+                            Next Unit
+                            <CheckCircle2 className="ml-2 h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button
+                            className="glow-button"
+                            onClick={() => router.push("/courses")}
+                          >
+                            Back to Courses
+                            <ArrowLeft className="ml-2 h-4 w-4" />
+                          </Button>
+                        )
                       )}
                     </div>
                   </div>
@@ -663,38 +680,39 @@ export default function ModulePage() {
                               return (
                                 <div
                                   key={oIndex}
-                                  className={`
-                                    flex items-center p-3 rounded-md border border-border/40
+                                  className={`flex items-center p-3 rounded-md border border-border/40 gap-3
                                     ${quizSubmitted && isCorrectAnswer ? "bg-green-500/10 border-green-500/50" : ""}
                                     ${quizSubmitted && isWrongSelected ? "bg-red-500/10 border-red-500/50" : ""}
-                                    ${!quizSubmitted && isUserSelected ? "bg-secondary/10 border-secondary/50" : ""}
+                                    ${!quizSubmitted && isUserSelected ? "bg-primary/10 border-primary/50" : ""}
                                     ${quizSubmitted ? "pointer-events-none" : "cursor-pointer hover:bg-muted/30"}
                                   `}
                                   onClick={() => !quizSubmitted && handleAnswerSelection(0, oIndex)}
                                 >
+                                  {/* bubble */}
                                   <div
                                     className={`
-                                      h-5 w-5 rounded-full mr-3 flex items-center justify-center border
-                                      ${
-                                        quizSubmitted && isCorrectAnswer
-                                          ? "border-green-500 bg-green-500/20"
-                                          : quizSubmitted && isWrongSelected
-                                          ? "border-red-500 bg-red-500/20"
-                                          : !quizSubmitted && isUserSelected
-                                          ? "border-secondary bg-secondary/20"
-                                          : "border-muted-foreground"
+                                      flex items-center justify-center rounded-full
+                                      h-5 w-5 min-w-[1.25rem] min-h-[1.25rem]
+                                      border
+                                      ${quizSubmitted && isCorrectAnswer
+                                        ? "border-green-500 bg-green-500/20"
+                                        : quizSubmitted && isWrongSelected
+                                        ? "border-red-500 bg-red-500/20"
+                                        : !quizSubmitted && isUserSelected
+                                        ? "border-primary bg-primary/20"
+                                        : "border-muted-foreground"
                                       }
                                     `}
                                   >
                                     {(quizSubmitted && isCorrectAnswer) || (!quizSubmitted && isUserSelected) ? (
-                                      <div
-                                        className={`h-2 w-2 rounded-full ${
-                                          quizSubmitted && isCorrectAnswer ? "bg-green-500" : "bg-secondary"
-                                        }`}
-                                      />
+                                      <div className={`h-2 w-2 rounded-full ${
+                                        quizSubmitted && isCorrectAnswer ? "bg-green-500" : "bg-primary"
+                                      }`} />
                                     ) : null}
                                   </div>
-                                  <span>{option}</span>
+
+                                  {/* text */}
+                                  <span className="text-sm leading-snug break-words">{option}</span>
                                 </div>
                               )
                             })}
@@ -716,14 +734,14 @@ export default function ModulePage() {
                               setQuizSubmitted(false)
                               setQuizScore(0)
                             }}
-                            className="glow-button-pink bg-secondary hover:bg-secondary/90"
+                            className="glow-button bg-primary hover:bg-primary/90"
                           >
                             Retry Quiz
                           </Button>
                         </div>
                       ) : (
                         <Button
-                          className="mt-8 w-full glow-button-pink bg-secondary hover:bg-secondary/90"
+                          className="mt-8 w-full glow-button bg-primary hover:bg-primary/90"
                           onClick={handleQuizSubmit}
                         >
                           Submit Answers

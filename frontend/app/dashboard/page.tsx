@@ -348,7 +348,7 @@ function QuickLearnCard({ session }: { session: QuickLearnType }) {
         </div>
       </CardContent>
       <CardFooter className="pt-3">
-        <Button className="glow-button-pink w-full" asChild>
+        <Button variant={"secondary"} className="glow-button-pink w-full" asChild>
           <Link href={`/quick-learn/${session.id}`}>Continue</Link>
         </Button>
       </CardFooter>
