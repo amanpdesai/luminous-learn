@@ -45,7 +45,7 @@ export default function CreateFlashcardsPage() {
         const token = session.access_token
   
         setLoadingCourses(true)
-        const resCourses = await fetch("http://localhost:8080/api/get_user_courses", {
+        const resCourses = await fetch("https://luminous-learn.onrender.com/api/get_user_courses", {
           headers: { Authorization: `Bearer ${token}` },
         })
         const coursesData: SourceItem[] = await resCourses.json()
@@ -53,7 +53,7 @@ export default function CreateFlashcardsPage() {
 
         setLoadingQuickLearns(true)
         
-        const resQuickLearns = await fetch("http://localhost:8080/api/quick_learns", {
+        const resQuickLearns = await fetch("https://luminous-learn.onrender.com/api/quick_learns", {
           headers: { Authorization: `Bearer ${token}` },
         })
         const quickLearnsData: SourceItem[] = await resQuickLearns.json()
@@ -90,7 +90,7 @@ export default function CreateFlashcardsPage() {
         learning_goal: learningGoal,
       })
   
-      const response = await fetch("http://localhost:8080/api/create_flashcard_set", {
+      const response = await fetch("https://luminous-learn.onrender.com/api/create_flashcard_set", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

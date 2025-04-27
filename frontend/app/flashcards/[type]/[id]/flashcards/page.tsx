@@ -61,7 +61,7 @@ export default function FlashcardsViewPage() {
       const token = session.access_token
   
       try {
-        const res = await fetch(`http://localhost:8080/api/flashcards/${params.type}/${params.id}`, {
+        const res = await fetch(`https://luminous-learn.onrender.com/api/flashcards/${params.type}/${params.id}`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         const data: FetchFlashcardSetResponse = await res.json()

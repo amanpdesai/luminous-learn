@@ -210,7 +210,7 @@ export default function CourseOutlineEditor() {
           completed: 0, // <-- this is the key addition
         }
     
-        const response = await fetch("http://localhost:8080/api/save_draft", {
+        const response = await fetch("https://luminous-learn.onrender.com/api/save_draft", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -268,7 +268,7 @@ export default function CourseOutlineEditor() {
           completed: 0
         }
     
-        const response = await fetch("http://localhost:8080/api/generate_course", {
+        const response = await fetch("https://luminous-learn.onrender.com/api/generate_course", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

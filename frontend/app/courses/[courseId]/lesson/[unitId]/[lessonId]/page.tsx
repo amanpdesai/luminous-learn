@@ -161,7 +161,7 @@ export default function ModulePage() {
       
       try {
         // Fetch the course data
-        const response = await fetch(`http://localhost:8080/api/get_user_course?course_id=${courseId}`, {
+        const response = await fetch(`https://luminous-learn.onrender.com/api/get_user_course?course_id=${courseId}`, {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${token}`,
@@ -420,7 +420,7 @@ export default function ModulePage() {
       // Call backend API to update lesson status (this is a mock endpoint - implement the actual endpoint)
       // You would need to implement this API endpoint in your backend
       /* 
-      await fetch(`http://localhost:8080/api/update_lesson_status`, {
+      await fetch(`https://luminous-learn.onrender.com/api/update_lesson_status`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,

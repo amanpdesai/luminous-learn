@@ -80,7 +80,7 @@ export default function DashboardPage() {
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) return
         const token = session.access_token
-        const res = await fetch("http://localhost:8080/api/get_user_courses", {
+        const res = await fetch("https://luminous-learn.onrender.com/api/get_user_courses", {
           headers: { Authorization: `Bearer ${token}` },
         })
         const data = await res.json()
@@ -98,7 +98,7 @@ export default function DashboardPage() {
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) return
         const token = session.access_token
-        const res = await fetch("http://localhost:8080/api/quick_learns", {
+        const res = await fetch("https://luminous-learn.onrender.com/api/quick_learns", {
           headers: { Authorization: `Bearer ${token}` },
         })
         const data = await res.json()
