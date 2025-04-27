@@ -10,12 +10,15 @@ export const YouTubeEmbed: React.FC<YouTubeEmbedProps> = ({ videos }) => {
   // Filter out invalid URLs and Rick Roll videos
   const validVideoIds = videos
     ?.map(url => {
-      const match = url.match(/(?:youtube\.com\/.*[?&]v=|youtu\.be\/)([^&?\n]+)/);
+      if (!url || typeof url !== 'string') return null;
+      
+      // More robust YouTube URL parsing
+      const match = url.match(/(?:youtube\.com\/(?:.*[?&]v=|embed\/)|youtu\.be\/)([^&?\n/]+)/);
       return match?.[1] || null;
     })
     .filter(id => {
       // Filter out null values (invalid URLs)
-      if (!id) return false;
+      if (!id || id.trim() === '') return false;
       
       // Filter out Rick Roll video IDs (most common Rick Roll video)
       const rickRollIds = ['dQw4w9WgXcQ', 'oHg5SJYRHA0'];
@@ -26,6 +29,21 @@ export const YouTubeEmbed: React.FC<YouTubeEmbedProps> = ({ videos }) => {
   if (!validVideoIds.length) {
     return null;
   }
+  
+  // Function to handle iframe errors
+  const handleIframeError = (e: React.SyntheticEvent<HTMLIFrameElement, Event>, index: number) => {
+    // Hide the iframe if there's an error loading the video
+    const iframe = e.currentTarget;
+    if (iframe) {
+      iframe.style.display = 'none';
+      
+      // Show error message in parent container
+      const container = iframe.parentElement;
+      if (container) {
+        container.classList.add('video-unavailable');
+      }
+    }
+  };
   
   return (
     <div className="mt-6 mb-8">
@@ -39,6 +57,7 @@ export const YouTubeEmbed: React.FC<YouTubeEmbedProps> = ({ videos }) => {
               src={`https://www.youtube.com/embed/${videoId}`}
               title={`Video ${index + 1}`}
               frameBorder="0"
+              onError={(e) => handleIframeError(e, index)}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
             ></iframe>
@@ -74,6 +93,11 @@ if (typeof window !== 'undefined') {
         width: 100%;
         height: 100%;
         border: 0;
+      }
+      
+      /* Style for containers with unavailable videos */
+      .video-unavailable {
+        display: none; /* Don't display containers with unavailable videos */
       }
     `
     document.head.appendChild(style)

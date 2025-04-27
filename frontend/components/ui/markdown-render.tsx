@@ -135,7 +135,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, vid
         components={{
           code: CodeBlock,
           p: ({ node, children, ...props }) => {
-            if (containsPre(node)) {
+            if (containsBlockElement(node)) {
               return <>{children}</>; // Don't wrap in <p> if inside a <pre>
             }
           
