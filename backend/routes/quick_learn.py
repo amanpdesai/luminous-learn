@@ -1,8 +1,8 @@
 from flask import Blueprint, request, jsonify
 from flask_cors import cross_origin
-from utils.quick_learn import generate_quick_learn
 from utils.token_verification import verify_token_and_get_user_id
 from utils.quick_learn_db import save_quick_learn, get_quick_learns_for_user, get_quick_learn_by_id, delete_quick_learn
+import requests
 
 quick_learn_bp = Blueprint('quick_learn', __name__)
 
@@ -41,8 +41,18 @@ def create_quick_learn():
             return jsonify({"error": "Invalid or expired token"}), 401
 
         print(f"[INFO] Generating quick learn for topic: {topic}, difficulty: {difficulty}")
-        quick_learn_content = generate_quick_learn(topic, difficulty)
-        print(f"[DEBUG] Generated quick_learn_content: {quick_learn_content}")
+        # Call uAgent REST endpoint instead of direct helper
+        agent_response = requests.post(
+            "http://localhost:8011/generate_quick_learn",
+            json={"topic": topic, "difficulty": difficulty},
+            headers={"Content-Type": "application/json"}
+        )
+        
+        if agent_response.status_code != 200:
+            print(f"[ERROR] Agent returned error: {agent_response.status_code}, {agent_response.text}")
+            return jsonify({"error": f"Agent service error: {agent_response.text}"}), 500
+            
+        quick_learn_content = agent_response.json()["data"]
 
         if not isinstance(quick_learn_content, dict):
             print(f"[ERROR] Invalid generated quick learn content: {type(quick_learn_content)}")

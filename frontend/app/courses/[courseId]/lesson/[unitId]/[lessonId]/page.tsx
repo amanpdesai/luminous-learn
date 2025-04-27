@@ -44,6 +44,7 @@ type LessonComplete = {
   additional_resources: Resource[]
   duration_in_min: string
   status: string
+  videos?: string[]  // YouTube videos URLs
 }
 
 type LessonOutline = {
@@ -92,6 +93,7 @@ type FallbackLesson = {
   type: string
   duration: string
   status: string
+  videos?: string[] // YouTube videos for fallback lessons
 }
 
 // Type for the lesson data structure used in the UI
@@ -120,6 +122,7 @@ type LessonData = {
     type: string
   }[]
   quiz: QuizQuestion
+  videos?: string[] // YouTube tutorial videos
 }
 
 export default function ModulePage() {
@@ -263,6 +266,8 @@ export default function ModulePage() {
         (l) => l.id === Number.parseInt(lessonId as string)
       );
       
+      console.log('Using fallback lesson data with videos:', currentFallbackLesson?.videos);
+      
       return {
         id: lessonId || 0,
         title: currentFallbackLesson?.title || "Lesson",
@@ -300,12 +305,25 @@ export default function ModulePage() {
           answer_choices: ["Option A", "Option B", "Option C", "Option D"],
           answer: "Option A",
         },
+        videos: currentFallbackLesson?.videos || [], // Pass videos to MarkdownRenderer
       };
     } else {
       const currentUnit = course.units.find(u => u.unit_number.toString() === unitId);
       if (!currentUnit) {
         throw new Error("Unit not found");
       }
+      
+      // Debugging videos in current lesson
+      console.log('Current lesson videos:', currentLessonData.videos); 
+      console.log('Full currentLessonData:', JSON.stringify(currentLessonData, null, 2));
+  
+      // For testing, provide a hardcoded YouTube URL if none exists
+      // REMOVE THIS IN PRODUCTION - only for testing
+      const testVideos = currentLessonData.videos && currentLessonData.videos.length > 0 
+        ? currentLessonData.videos 
+        : ['https://www.youtube.com/watch?v=dQw4w9WgXcQ'];
+      
+      console.log('Using videos for lesson:', testVideos);
   
       return {
         id: currentLessonData.lesson || lessonId,
@@ -331,11 +349,8 @@ export default function ModulePage() {
           url: resource.url,
           type: "documentation",
         })),
-        quiz: currentLessonData.assessments || {
-          question: "Which of the following statements about this lesson is true?",
-          answer_choices: ["Option A", "Option B", "Option C", "Option D"],
-          correctAnswer: 1,
-        },
+        quiz: currentLessonData.assessments,
+        videos: testVideos,
       };
     }
   };
@@ -371,19 +386,10 @@ export default function ModulePage() {
   }
 
   const handleQuizSubmit = () => {
-    if (!currentLessonData?.assessments) {
-      return
-    }
-
-    let correctCount = 0
-    console.log("QUIZ ANSWERS")
-    console.log(quizAnswers)
-    if (currentLessonData.assessments.answer_choices[quizAnswers[0]] === currentLessonData.assessments.answer) {
-      correctCount++
-    }
-
-    const score = correctCount === 1 ? 100 : 0;
-    setQuizScore(score)
+    const selected = quizAnswers[0]
+    if (selected === undefined) return
+    const correct = lesson.quiz.answer_choices[selected] === lesson.quiz.answer
+    setQuizScore(correct ? 100 : 0)
     setQuizSubmitted(true)
   }
 
@@ -580,7 +586,7 @@ export default function ModulePage() {
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="content" className="animate-in fade-in-50 duration-300">
+                <TabsContent value="content" className="animate-in fade-in-50 duration-300 space-y-4">
                   <div className="w-full ml-8">
                     {lesson.type === "video" ? (
                       <div className="aspect-video mb-8">
@@ -594,7 +600,10 @@ export default function ModulePage() {
                       </div>
                     ) : (
                       <div className="prose prose-invert max-w-none mb-8">
-                        <MarkdownRenderer content={cleanedLessonContent} />
+                        <MarkdownRenderer 
+                          content={cleanedLessonContent} 
+                          videos={lesson.videos || currentLessonData?.videos || []}
+                        />
                       </div>
                     )}
 
