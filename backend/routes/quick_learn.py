@@ -10,7 +10,7 @@ quick_learn_bp = Blueprint('quick_learn', __name__)
 # Create a new quick learn session
 # -------------------------------
 @quick_learn_bp.route('/generate_quick_learn', methods=['POST', 'OPTIONS'])
-@cross_origin(origin="http://localhost:3000", methods=["POST", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
+@cross_origin(origins=["http://localhost:3000", "https://luminous-learn.vercel.app"], methods=["POST", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
 def create_quick_learn():
     if request.method == "OPTIONS":
         return '', 200
@@ -69,7 +69,7 @@ def create_quick_learn():
 # Fetch all quick learns for user
 # -------------------------------
 @quick_learn_bp.route('/quick_learns', methods=['GET', 'OPTIONS'])
-@cross_origin(origin="http://localhost:3000", methods=["GET", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
+@cross_origin(origins=["http://localhost:3000", "https://luminous-learn.vercel.app"], methods=["GET", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
 def get_quick_learns():
     if request.method == "OPTIONS":
         return '', 200
@@ -91,7 +91,7 @@ def get_quick_learns():
 # Fetch a single quick learn by ID
 # -------------------------------
 @quick_learn_bp.route('/quick_learn/<quick_learn_id>', methods=['GET', 'OPTIONS'])
-@cross_origin(origin="http://localhost:3000", methods=["GET", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
+@cross_origin(origins=["http://localhost:3000", "https://luminous-learn.vercel.app"], methods=["GET", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
 def get_quick_learn(quick_learn_id):
     if request.method == "OPTIONS":
         return '', 200
@@ -113,7 +113,7 @@ def get_quick_learn(quick_learn_id):
 # Delete a quick learn by ID
 # -------------------------------
 @quick_learn_bp.route('/quick_learn/<quick_learn_id>', methods=['DELETE', 'OPTIONS'])
-@cross_origin(origin="http://localhost:3000", methods=["DELETE", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
+@cross_origin(origins=["http://localhost:3000", "https://luminous-learn.vercel.app"], methods=["DELETE", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
 def delete_quick_learn_route(quick_learn_id):
     if request.method == "OPTIONS":
         return '', 200
@@ -132,7 +132,7 @@ def delete_quick_learn_route(quick_learn_id):
         return jsonify({"error": f"Failed to delete quick learn: {str(e)}"}), 500
 
 @quick_learn_bp.route('/update_quick_learn/<quick_learn_id>', methods=['PUT', 'OPTIONS'])
-@cross_origin(origin="http://localhost:3000", methods=["PUT", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
+@cross_origin(origins=["http://localhost:3000", "https://luminous-learn.vercel.app"], methods=["PUT", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
 def update_quick_learn(quick_learn_id):
     if request.method == "OPTIONS":
         return '', 200

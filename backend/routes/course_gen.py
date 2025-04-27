@@ -8,7 +8,7 @@ from utils.course_updating import save_course_draft
 course_gen_bp = Blueprint('course_gen', __name__)
 
 @course_gen_bp.route('/generate_syllabus', methods=['POST', 'OPTIONS'])
-@cross_origin(origin="http://localhost:3000", methods=["POST", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
+@cross_origin(origins=["http://localhost:3000", "https://luminous-learn.vercel.app"], methods=["POST", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
 def generate_syllabus():
     if request.method == "OPTIONS":
         return '', 200
@@ -22,7 +22,7 @@ def generate_syllabus():
     return Response(syllabus_json_str, status=200, mimetype='application/json')
 
 @course_gen_bp.route("/generate_course", methods=["POST", "OPTIONS"])
-@cross_origin(origin="http://localhost:3000", methods=["POST", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
+@cross_origin(origins=["http://localhost:3000", "https://luminous-learn.vercel.app"], methods=["POST", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
 def generate_course_using_syllabus():
     if request.method == "OPTIONS":
         return '', 200

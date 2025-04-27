@@ -9,7 +9,7 @@ from flask_cors import cross_origin
 flashcards_bp = Blueprint('create_flashcards', __name__)
 
 @flashcards_bp.route("/create_flashcard_set", methods=["POST", "OPTIONS"])
-@cross_origin(origin="http://localhost:3000", methods=["POST", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
+@cross_origin(origins=["http://localhost:3000", "https://luminous-learn.vercel.app"], methods=["POST", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
 def create_flashcards():
     if request.method == "OPTIONS":
         return '', 200
@@ -81,7 +81,7 @@ def create_flashcards():
         return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
 
 @flashcards_bp.route("/flashcard_sets", methods=["GET", "OPTIONS"])
-@cross_origin(origin="http://localhost:3000", methods=["GET", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
+@cross_origin(origins=["http://localhost:3000", "https://luminous-learn.vercel.app"], methods=["GET", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
 def get_flashcard_sets():
     if request.method == "OPTIONS":
         return '', 200
@@ -109,7 +109,7 @@ def get_flashcard_sets():
         return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
 
 @flashcards_bp.route("/flashcards/<string:source_type>/<string:flashcard_set_id>", methods=["GET", "OPTIONS"])
-@cross_origin(origin="http://localhost:3000", methods=["GET", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
+@cross_origin(origins=["http://localhost:3000", "https://luminous-learn.vercel.app"], methods=["GET", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
 def get_flashcard_set(source_type, flashcard_set_id):
     if request.method == "OPTIONS":
         return '', 200
@@ -170,7 +170,7 @@ def get_flashcard_set(source_type, flashcard_set_id):
         return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
 
 @flashcards_bp.route("/flashcards/update_card_progress/<string:source_type>/<string:flashcard_set_id>/<string:card_id>", methods=["POST", "OPTIONS"])
-@cross_origin(origin="http://localhost:3000", methods=["POST", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
+@cross_origin(origins=["http://localhost:3000", "https://luminous-learn.vercel.app"], methods=["POST", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
 def update_card_progress(source_type, flashcard_set_id, card_id):
     if request.method == "OPTIONS":
         return '', 200
@@ -230,7 +230,7 @@ def update_card_progress(source_type, flashcard_set_id, card_id):
 
 
 @flashcards_bp.route("/flashcards/update_flashcard_set_progress/<string:source_type>/<string:flashcard_set_id>", methods=["POST", "OPTIONS"])
-@cross_origin(origin="http://localhost:3000", methods=["POST", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
+@cross_origin(origins=["http://localhost:3000", "https://luminous-learn.vercel.app"], methods=["POST", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
 def update_flashcard_set_progress(source_type, flashcard_set_id):
     if request.method == "OPTIONS":
         return '', 200
@@ -313,7 +313,7 @@ def update_flashcard_set_progress(source_type, flashcard_set_id):
         return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
 
 @flashcards_bp.route("/flashcards/update_flashcard_set/<string:source_type>/<string:flashcard_set_id>", methods=["POST", "OPTIONS"])
-@cross_origin(origin="http://localhost:3000", methods=["POST", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
+@cross_origin(origins=["http://localhost:3000", "https://luminous-learn.vercel.app"], methods=["POST", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
 def update_flashcard_set_full(source_type, flashcard_set_id):
     if request.method == "OPTIONS":
         return '', 200

@@ -5,7 +5,7 @@ from utils.course_updating import save_course_draft, update_course_draft, delete
 course_update_bp = Blueprint("course", __name__)
 
 @course_update_bp.route("/save_draft", methods=["POST", "OPTIONS"])
-@cross_origin(origin="http://localhost:3000", methods=["POST", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
+@cross_origin(origins=["http://localhost:3000", "https://luminous-learn.vercel.app"], methods=["POST", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
 def save_draft():
     if request.method == "OPTIONS":
         return '', 200  # preflight success
@@ -16,7 +16,7 @@ def save_draft():
     return jsonify(response)
 
 @course_update_bp.route("/update_draft/<course_id>", methods=["PUT", "OPTIONS"])
-@cross_origin(origin="http://localhost:3000", methods=["PUT", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
+@cross_origin(origins=["http://localhost:3000", "https://luminous-learn.vercel.app"], methods=["PUT", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
 def update_draft(course_id):
     if request.method == "OPTIONS":
         return '', 200  # preflight success
@@ -31,7 +31,7 @@ def update_draft(course_id):
     return jsonify(response)
 
 @course_update_bp.route("/delete_course/<course_id>", methods=["DELETE", "OPTIONS"])
-@cross_origin(origin="http://localhost:3000", methods=["DELETE", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
+@cross_origin(origins=["http://localhost:3000", "https://luminous-learn.vercel.app"], methods=["DELETE", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
 def delete_course_endpoint(course_id):
     if request.method == "OPTIONS":
         return '', 200  # preflight success

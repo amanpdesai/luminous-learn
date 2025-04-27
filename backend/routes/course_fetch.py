@@ -5,7 +5,7 @@ from utils.course_fetching import get_courses_for_user, get_single_course_for_us
 course_fetch_bp = Blueprint("course_fetch", __name__)
 
 @course_fetch_bp.route("/get_user_courses", methods=["GET", "OPTIONS"])
-@cross_origin(origin="http://localhost:3000", methods=["GET", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
+@cross_origin(origins=["http://localhost:3000", "https://luminous-learn.vercel.app"], methods=["GET", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
 def get_user_courses():
     if request.method == "OPTIONS":
         return '', 200
@@ -15,7 +15,7 @@ def get_user_courses():
     return jsonify(response)
 
 @course_fetch_bp.route("/get_user_course", methods=["GET", "OPTIONS"])
-@cross_origin(origin="http://localhost:3000", methods=["GET", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
+@cross_origin(origins=["http://localhost:3000", "https://luminous-learn.vercel.app"], methods=["GET", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
 def get_user_course():
     if request.method == "OPTIONS":
         return '', 200
