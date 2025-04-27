@@ -11,6 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { ArrowLeft, Check, Loader2, Sparkles, X } from "lucide-react"
 import { supabase } from "@/lib/supabaseClient"
+import { backendUrl } from "@/lib/backendUrl"
 
 type QuestionType = "multiple-choice" | "typed-response" | "true-false"
 
@@ -76,7 +77,7 @@ export default function LearnViewPage() {
       const token = session.access_token
 
       try {
-        const res = await fetch(`http://localhost:8080/api/flashcards/${type}/${id}`, {
+        const res = await fetch(`${backendUrl}/api/flashcards/${type}/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         })
 
@@ -187,7 +188,7 @@ export default function LearnViewPage() {
     console.log(cardUpdates)
 
     for (const [cardId, counts] of Object.entries(cardUpdates)) {
-      await fetch(`http://localhost:8080/api/flashcards/update_card_progress/${type}/${id}/${cardId}`, {
+      await fetch(`${backendUrl}/api/flashcards/update_card_progress/${type}/${id}/${cardId}`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -197,7 +198,7 @@ export default function LearnViewPage() {
       })
     }
 
-    await fetch(`http://localhost:8080/api/flashcards/update_flashcard_set_progress/${type}/${id}`, {
+    await fetch(`${backendUrl}/api/flashcards/update_flashcard_set_progress/${type}/${id}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,

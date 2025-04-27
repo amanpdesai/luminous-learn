@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils"
 import { PlusIcon, TrashIcon, Loader2Icon, Sparkles, CheckIcon } from "lucide-react"
 import Link from "next/link"
 import { Label } from "@radix-ui/react-label"
+import { backendUrl } from "@/lib/backendUrl"
 
 interface Lesson {
   lesson: string
@@ -210,7 +211,7 @@ export default function CourseOutlineEditor() {
           completed: 0, // <-- this is the key addition
         }
     
-        const response = await fetch("http://localhost:8080/api/save_draft", {
+        const response = await fetch(`${backendUrl}/api/save_draft`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -268,7 +269,7 @@ export default function CourseOutlineEditor() {
           completed: 0
         }
     
-        const response = await fetch("http://localhost:8080/api/generate_course", {
+        const response = await fetch(`${backendUrl}/api/generate_course`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

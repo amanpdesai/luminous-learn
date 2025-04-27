@@ -12,6 +12,7 @@ import { useParams, useRouter } from "next/navigation"
 import { MarkdownRenderer } from "@/components/ui/markdown-render"
 import TurndownService from "turndown"
 import { supabase } from "@/lib/supabaseClient"
+import { backendUrl } from "@/lib/backendUrl"
 
 // --- Types ---
 interface QuickLearnSection {
@@ -91,7 +92,7 @@ export default function QuickLearnPage() {
     
         const token = session.access_token
     
-        const response = await fetch(`http://localhost:8080/api/quick_learn/${id}`, {
+        const response = await fetch(`${backendUrl}/api/quick_learn/${id}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'

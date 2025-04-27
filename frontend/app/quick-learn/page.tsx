@@ -31,6 +31,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
 import { supabase } from "@/lib/supabaseClient"
+import { backendUrl } from "@/lib/backendUrl"
 
 type QuickLearnSession = {
   id: string
@@ -92,7 +93,7 @@ export default function QuickLearnPage() {
     
         const token = session.access_token
     
-        const response = await fetch('http://localhost:8080/api/quick_learns', {
+        const response = await fetch(`${backendUrl}/api/quick_learns`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'

@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress"
 import { ArrowLeft, BookOpen, Check, Edit, Layers, Sparkles, Zap } from "lucide-react"
 import { supabase } from "@/lib/supabaseClient"
 import { format } from "date-fns"
+import { backendUrl } from "@/lib/backendUrl"
 
 // Types
 interface Flashcard {
@@ -57,7 +58,7 @@ export default function FlashcardSetPage() {
 
         const token = session.access_token
 
-        const url = `http://localhost:8080/api/flashcards/${params.type}/${params.id}`
+        const url = `${backendUrl}/api/flashcards/${params.type}/${params.id}`
         console.log("Fetching flashcards:", url)
 
         const res = await fetch(url, {

@@ -10,6 +10,7 @@ import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, BookOpen, Sparkles, Zap } from "lucide-react"
 import { supabase } from "@/lib/supabaseClient"
+import { backendUrl } from "@/lib/backendUrl"
 
 interface SourceItem {
   id: string
@@ -45,7 +46,7 @@ export default function CreateFlashcardsPage() {
         const token = session.access_token
   
         setLoadingCourses(true)
-        const resCourses = await fetch("http://localhost:8080/api/get_user_courses", {
+        const resCourses = await fetch(`${backendUrl}/api/get_user_courses`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         const coursesData: SourceItem[] = await resCourses.json()
@@ -53,7 +54,7 @@ export default function CreateFlashcardsPage() {
 
         setLoadingQuickLearns(true)
         
-        const resQuickLearns = await fetch("http://localhost:8080/api/quick_learns", {
+        const resQuickLearns = await fetch(`${backendUrl}/api/quick_learns`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         const quickLearnsData: SourceItem[] = await resQuickLearns.json()
@@ -90,7 +91,7 @@ export default function CreateFlashcardsPage() {
         learning_goal: learningGoal,
       })
   
-      const response = await fetch("http://localhost:8080/api/create_flashcard_set", {
+      const response = await fetch(`${backendUrl}/api/create_flashcard_set`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
