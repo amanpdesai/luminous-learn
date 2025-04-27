@@ -121,7 +121,7 @@ type LessonData = {
     url: string
     type: string
   }[]
-  quiz: QuizQuestion[]
+  quiz: QuizQuestion
   videos?: string[] // YouTube tutorial videos
 }
 
@@ -300,19 +300,11 @@ export default function ModulePage() {
                 type: "documentation",
               },
             ],
-        quiz: [
-          // Mock quiz data - in a real application, you would retrieve quiz data from the backend
-          {
-            question: "Which of the following statements about this lesson is true?",
-            answer_choices: ["Option A", "Option B", "Option C", "Option D"],
-            correctAnswer: 1,
-          },
-          {
-            question: "What is the main topic covered in this lesson?",
-            answer_choices: ["Topic 1", "Topic 2", "Topic 3", "Topic 4"],
-            correctAnswer: 0,
-          },
-        ],
+        quiz: {
+          question: "Which of the following statements about this lesson is true?",
+          answer_choices: ["Option A", "Option B", "Option C", "Option D"],
+          answer: "Option A",
+        },
         videos: currentFallbackLesson?.videos || [], // Pass videos to MarkdownRenderer
       };
     } else {
@@ -325,13 +317,6 @@ export default function ModulePage() {
       console.log('Current lesson videos:', currentLessonData.videos); 
       console.log('Full currentLessonData:', JSON.stringify(currentLessonData, null, 2));
   
-      // Grab real quiz questions
-      const quizQuestions = currentLessonData.assessments?.questions?.map((q) => ({
-        question: q.question,
-        answer_choices: q.answer_choices,
-        correctAnswer: q.correctAnswer,
-      })) || [];
-      
       // For testing, provide a hardcoded YouTube URL if none exists
       // REMOVE THIS IN PRODUCTION - only for testing
       const testVideos = currentLessonData.videos && currentLessonData.videos.length > 0 
@@ -364,20 +349,8 @@ export default function ModulePage() {
           url: resource.url,
           type: "documentation",
         })),
-        quiz: quizQuestions.length > 0 ? quizQuestions : [
-          // fallback if no quiz questions found
-          {
-            question: "Which of the following statements about this lesson is true?",
-            answer_choices: ["Option A", "Option B", "Option C", "Option D"],
-            correctAnswer: 1,
-          },
-        ],
+        quiz: currentLessonData.assessments,
         videos: testVideos,
-<!--         quiz: currentLessonData.assessments || {
-          question: "Which of the following statements about this lesson is true?",
-          answer_choices: ["Option A", "Option B", "Option C", "Option D"],
-          correctAnswer: 1,
-        }, -->
       };
     }
   };
@@ -413,19 +386,10 @@ export default function ModulePage() {
   }
 
   const handleQuizSubmit = () => {
-    if (!currentLessonData?.assessments) {
-      return
-    }
-
-    let correctCount = 0
-    console.log("QUIZ ANSWERS")
-    console.log(quizAnswers)
-    if (currentLessonData.assessments.answer_choices[quizAnswers[0]] === currentLessonData.assessments.answer) {
-      correctCount++
-    }
-
-    const score = correctCount === 1 ? 100 : 0;
-    setQuizScore(score)
+    const selected = quizAnswers[0]
+    if (selected === undefined) return
+    const correct = lesson.quiz.answer_choices[selected] === lesson.quiz.answer
+    setQuizScore(correct ? 100 : 0)
     setQuizSubmitted(true)
   }
 
