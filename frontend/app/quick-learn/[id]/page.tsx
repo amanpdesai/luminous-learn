@@ -18,7 +18,9 @@ import { backendUrl } from "@/lib/backendUrl"
 interface QuickLearnSection {
   id: string;
   title: string;
-  content: string;
+  readings: string;
+  examples: string;
+  additional_resources: QuickLearnResource[];
 }
 
 interface QuickLearnQuestion {
@@ -34,10 +36,9 @@ interface QuickLearnAssessment {
 }
 
 interface QuickLearnResource {
-  title: string;
+  unit_title: string;
+  text: string;  
   url: string;
-  description?: string;
-  type?: string;
 }
 
 interface QuickLearnData {
@@ -137,6 +138,7 @@ export default function QuickLearnPage() {
 
   const sections = session?.sections || []
   const currentSectionData = sections[currentSection] || null
+  const additionalResources = session?.sections?.[currentSection]?.additional_resources || []
 
   const turndownService = new TurndownService({
     headingStyle: "atx",
@@ -153,7 +155,6 @@ export default function QuickLearnPage() {
     },
   })
 
-  const cleanedSectionContent = currentSectionData?.content ?? ""
 
   const handleAnswerSelection = (questionIndex: number, answerIndex: number) => {
     setQuizAnswers((prev) => ({
@@ -267,12 +268,127 @@ export default function QuickLearnPage() {
                       </button>
                     </li>
                   ))}
+                  <li key="assessment">
+                    <button
+                      onClick={() => setCurrentSection(sections.length)}
+                      className={`flex items-center gap-2 py-2 px-3 rounded-md text-sm w-full text-left ${
+                        currentSection === sections.length ? "bg-secondary/10 text-secondary font-medium" : "hover:bg-muted/50"
+                      }`}
+                    >
+                    <span className="h-5 aspect-square rounded-full flex items-center justify-center text-xs font-medium bg-muted/70">
+                      {sections.length + 1}
+                    </span>
+                    <span className="whitespace-normal break-words leading-snug">Assessment</span>
+                  </button>
+                </li>
                 </ul>
               </div>
             </div>
 
             {/* Main content area */}
             <div className="flex-1 min-w-0 mr-12">
+              {currentSection == sections.length ? 
+              <div className="w-full pl-2 lg:pl-4 space-y-8">
+              <div className="bg-muted/20 p-6 rounded-lg border border-border/40">
+                <h2 className="text-xl font-medium mb-4">Knowledge Check</h2>
+                <p className="mb-6 text-muted-foreground">
+                  Test your understanding of the section content with these questions.
+                </p>
+
+                <div className="space-y-8">
+                  {session.assessment?.questions?.map((question, qIndex) => (
+                    <div key={qIndex} className="space-y-4">
+                      <h3 className="font-medium">
+                        {qIndex + 1}. {question.question}
+                      </h3>
+                      <div className="space-y-2">
+                        {question.options.map((option, oIndex) => (
+                          <div
+                            key={oIndex}
+                            className={`
+                              flex items-center p-3 rounded-md border border-border/40
+                              ${!quizSubmitted && quizAnswers[qIndex] === oIndex ? "bg-secondary/10 border-secondary/50" : ""}
+                              ${quizAnswers[qIndex] === oIndex ? "bg-secondary/10 border-secondary/50" : ""}
+                              ${
+                                quizSubmitted && oIndex === question.correctAnswer
+                                  ? "bg-green-500/10 border-green-500/50"
+                                  : ""
+                              }
+                              ${
+                                quizSubmitted && quizAnswers[qIndex] === oIndex && oIndex !== question.correctAnswer
+                                  ? "bg-red-500/10 border-red-500/50"
+                                  : ""
+                              }
+                              ${quizSubmitted ? "pointer-events-none" : "cursor-pointer hover:bg-muted/30"}
+                            `}
+                            onClick={() => !quizSubmitted && handleAnswerSelection(qIndex, oIndex)}
+                          >
+                            <div
+                              className={`
+                                h-5 w-5 rounded-full mr-3 flex items-center justify-center border
+                                ${
+                                  !quizSubmitted && quizAnswers[qIndex] === oIndex
+                                    ? "border-secondary bg-secondary/20"
+                                    : "border-muted-foreground"
+                                }
+                                ${
+                                  quizSubmitted && oIndex === question.correctAnswer
+                                    ? "border-green-500 bg-green-500/20"
+                                    : ""
+                                }
+                                ${
+                                  quizSubmitted &&
+                                  quizAnswers[qIndex] === oIndex &&
+                                  oIndex !== question.correctAnswer
+                                    ? "border-red-500 bg-red-500/20"
+                                    : ""
+                                }
+                              `}
+                            >
+                              {(!quizSubmitted && quizAnswers[qIndex] === oIndex) ||
+                                (quizSubmitted && oIndex === question.correctAnswer) ? (
+                                <div
+                                  className={`h-2 w-2 rounded-full 
+                                    ${quizSubmitted ? "bg-green-500" : "bg-secondary"}`}
+                                />
+                              ) : null}
+                            </div>
+                            <span>{option}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {quizSubmitted ? (
+                  <div className="mt-8 p-4 rounded-md bg-muted/30 text-center">
+                    <h3 className="text-xl font-medium mb-2">Your Score: {quizScore}%</h3>
+                    <p className="mb-4 text-muted-foreground">
+                      {"Great job on completing the quiz!"}
+                    </p>
+                    <Button
+                      onClick={() => {
+                        setQuizAnswers({})
+                        setQuizSubmitted(false)
+                        setQuizScore(0)
+                      }}
+                      className="glow-button-pink bg-secondary hover:bg-secondary/90"
+                    >
+                      Retry Quiz
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    className="mt-8 w-full glow-button-pink bg-secondary hover:bg-secondary/90"
+                    onClick={handleQuizSubmit}
+                  >
+                    Submit Answers
+                  </Button>
+                )}
+              </div>
+            </div>
+              :  
               <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
                 <TabsList className="ml-8 w-full max-w-lg px-1 py-5 bg-card border border-border rounded-full mb-6 z-10 relative shadow-sm flex gap-1">
                   <TabsTrigger
@@ -287,7 +403,7 @@ export default function QuickLearnPage() {
                     Content
                   </TabsTrigger>
                   <TabsTrigger
-                    value="quiz"
+                    value="examples"
                     className="flex-1 px-7 py-4 text-base font-medium rounded-full transition-all
                       text-muted-foreground hover:text-foreground
                       [data-state='active']:text-white
@@ -295,7 +411,7 @@ export default function QuickLearnPage() {
                       [data-state='active']:shadow
                       [data-state='active']:glow-text-pink"
                   >
-                    Quiz
+                    Examples
                   </TabsTrigger>
                   <TabsTrigger
                     value="resources"
@@ -313,7 +429,7 @@ export default function QuickLearnPage() {
                 <TabsContent value="content" className="animate-in fade-in-50 duration-300">
                   <div className="w-full ml-8">
                     <div className="prose prose-invert max-w-none mb-8">
-                      <MarkdownRenderer content={cleanedSectionContent} />
+                      <MarkdownRenderer content={currentSectionData?.readings} />
                     </div>
 
                     <div className="flex justify-between pt-4 border-t border-border/40">
@@ -362,8 +478,13 @@ export default function QuickLearnPage() {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="quiz" className="animate-in fade-in-50 duration-300">
-                  <div className="w-full pl-2 lg:pl-4 space-y-8">
+                <TabsContent value="examples" className="animate-in fade-in-50 duration-300">
+                  <div className="w-full ml-8">
+                    <div className="prose prose-invert max-w-none mb-8">
+                      <MarkdownRenderer content={currentSectionData?.examples} />
+                    </div>
+                  </div>
+                  {/*<div className="w-full pl-2 lg:pl-4 space-y-8">
                     <div className="bg-muted/20 p-6 rounded-lg border border-border/40">
                       <h2 className="text-xl font-medium mb-4">Knowledge Check</h2>
                       <p className="mb-6 text-muted-foreground">
@@ -462,7 +583,7 @@ export default function QuickLearnPage() {
                         </Button>
                       )}
                     </div>
-                  </div>
+                  </div>*/}
                 </TabsContent>
 
                 {/* Resources Tab */}
@@ -471,7 +592,7 @@ export default function QuickLearnPage() {
                     <h2 className="text-xl font-medium mb-6">Additional Resources</h2>
 
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {session.resources?.map((resource, index) => (
+                      {additionalResources?.map((resource: QuickLearnResource, index: number) => (
                         <a
                           key={index}
                           href={resource.url}
@@ -482,19 +603,13 @@ export default function QuickLearnPage() {
                           <Card className="h-full border-border/50 hover:border-secondary/60 transition-all group-hover:shadow-md card-hover">
                             <CardContent className="p-4 flex flex-col h-full">
                               <div className="h-10 w-10 rounded-full bg-secondary/10 flex items-center justify-center mb-3">
-                                {(resource.type === "documentation") ? (
-                                  <FileText className="h-5 w-5 text-secondary" />
-                                ) : (resource.type === "guide") ? (
-                                  <BookOpen className="h-5 w-5 text-secondary" />
-                                ) : (
-                                  <Lightbulb className="h-5 w-5 text-secondary" />
-                                )}
+                                <FileText className="h-5 w-5 text-secondary" />
                               </div>
                               <h3 className="font-medium mb-2 group-hover:text-secondary transition-colors">
-                                {resource.title}
+                                {resource.text}
                               </h3>
                               <p className="text-xs text-muted-foreground mb-2">
-                                External Resource - {resource.type ? resource.type.charAt(0).toUpperCase() + resource.type.slice(1) : 'Resource'}
+                                External Resource - Documentation
                               </p>
                             </CardContent>
                           </Card>
@@ -504,6 +619,7 @@ export default function QuickLearnPage() {
                   </div>
                 </TabsContent>
               </Tabs>
+                }
             </div>
           </div>
         </div>

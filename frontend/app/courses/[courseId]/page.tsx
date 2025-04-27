@@ -7,6 +7,7 @@ import {
   Book,
   BookOpen,
   Calendar,
+  Check,
   ChevronDown,
   Clock,
   FileText,
@@ -90,6 +91,23 @@ export default function CoursePage() {
   const router = useRouter()
   const [course, setCourse] = useState<Course | null>(null)
 
+  const findFirstIncompleteUnit = (course: Course | null) => {
+    if (!course) return 0;
+    for (const unit of course.units) {
+      const unitLessons = course.unit_lessons.filter(
+        (lesson) => lesson.unit_number === unit.unit_number
+      );
+      const hasIncomplete = unitLessons.some(
+        (lesson) => lesson.status !== "completed"
+      );
+      if (hasIncomplete) {
+        return course.units.indexOf(unit); // Return unit index
+      }
+    }
+    return 0; // Default to first unit if all lessons are completed
+  };
+  
+
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession()
@@ -134,6 +152,8 @@ export default function CoursePage() {
         }
         console.log("Fetched course:", rawCourse)
         setCourse(rawCourse)
+        const incompleteUnitIndex = findFirstIncompleteUnit(rawCourse);
+        setExpandedUnits({ [incompleteUnitIndex]: true });
       } catch (err) {
         console.error("Error fetching course:", err)
       }
@@ -149,6 +169,8 @@ export default function CoursePage() {
   const totalLessons = course?.units?.reduce((total, unit) => {
     return total + (unit.lesson_outline ? unit.lesson_outline.length : 0);
   }, 0) || 0
+
+  let completedCount = course?.completed || 0
   
   // Format duration and hours per week for display
   const duration = course ? `${course.estimated_number_of_weeks} weeks` : ''
@@ -205,7 +227,10 @@ export default function CoursePage() {
   }
 
   // Function to get the appropriate icon for lesson type
-  const getModuleIcon = (type: string) => {
+  const getModuleIcon = (type: string, status: string) => {
+    if (status === "complete"){
+      return <Check className="h-4 w-4 text-green-400" />
+    }else{
     switch (type) {
       case "video":
         return <Video className="h-4 w-4 text-red-400" />
@@ -216,7 +241,7 @@ export default function CoursePage() {
       case "lesson":
       default:
         return <Book className="h-4 w-4 text-blue-400" />
-    }
+    }}
   }
 
   if (pageLoading || !course){
@@ -227,31 +252,31 @@ export default function CoursePage() {
     <AppShell>
       <div className="flex flex-col min-h-screen">
         {/* Course Header Section */}
-        <div className="bg-primary/10 dark:bg-primary/5 border-b border-border/40">
+        <div className="bg-primary/10 dark:bg-primary/5 border-b border-border/40 p-3">
           <div className="container mx-auto px-4 py-6">
             <div className="flex flex-col gap-2">
               <Link
                 href="/courses"
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2"
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Back to Courses
               </Link>
 
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
                 <div>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="mb-2 bg-secondary/10 border-secondary/30 text-secondary"
+                    className="mb-4 bg-secondary/10 border-secondary/30 text-secondary"
                   >
                     {course.level}
                   </Button>
-                  <h1 className="text-2xl md:text-3xl font-display glow-text mb-2">{course.title}</h1>
-                  <p className="text-muted-foreground max-w-4xl">{course.description}</p>
+                  <h1 className="text-2xl md:text-3xl font-display glow-text mb-4">{course.title}</h1>
+                  <p className="text-muted-foreground">{course.description}</p>
                 </div>
 
-                <div className="flex flex-col gap-2 md:items-end">
+                <div className="flex flex-col gap-2 md:items-end ml-4 mr-8">
                   <Button variant="default" className="glow-button" asChild>
                     <Link href={`/courses/${course.id}/lesson/${getCurrentLessonLink()}`}>
                       Continue Learning
@@ -357,7 +382,7 @@ export default function CoursePage() {
                             >
                               <div className="flex items-center gap-3">
                                 <div className="h-8 w-8 rounded-full bg-muted/50 flex items-center justify-center">
-                                  {getModuleIcon(lessonType)}
+                                  {getModuleIcon(lessonType, completeLesson?.status || "not started")}
                                 </div>
                                 <div>
                                   <h4 className="text-sm font-medium">{outlineLesson.lesson || 'Untitled Lesson'}</h4>
@@ -432,7 +457,7 @@ export default function CoursePage() {
                       <dt className="text-muted-foreground">Time Commitment</dt>
                       <dd>{hoursPerWeek}</dd>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="hidden flex justify-between">
                       <dt className="text-muted-foreground">Prerequisites</dt>
                       <dd>{course.prerequisites?.join(', ') || 'None'}</dd>
                     </div>

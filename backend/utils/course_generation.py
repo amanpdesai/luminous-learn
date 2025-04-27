@@ -52,7 +52,7 @@ class LessonComplete(BaseModel):
     readings: str
     examples: str
     exercises: str
-    assessments: Assessment
+    assessments: GradedQuestion
     additional_resources: List[Resource]
     duration_in_min: str
     status: str
