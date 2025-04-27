@@ -3,3 +3,6 @@ package-lock.json
 backend/.env
 frontend/.env.local
 backend/__pycache__
+backend/logs
+backend/agents/__pycache__
+backend/routes/__pycache__
